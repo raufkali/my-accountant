@@ -5,6 +5,7 @@ import Dashboard from "./components/Dashboard.jsx";
 import Transactions from "./components/Transactions.jsx";
 import Accounts from "./components/Accounts.jsx";
 import Orders from "./components/Orders.jsx";
+import Persons from "./components/Persons.jsx";
 const App = () => {
   return (
     <>
@@ -14,6 +15,7 @@ const App = () => {
         <Route path="/orders" element={<Orders />} />
         <Route path="/transactions" element={<Transactions />} />
         <Route path="/accounts" element={<Accounts />} />
+        <Route path="/persons" element={<Persons />} />
       </Routes>
     </>
   );

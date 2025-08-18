@@ -27,4 +27,10 @@ contextBridge.exposeInMainWorld("api", {
     ipcRenderer.invoke("accounts:addTransaction", id, type, txData),
   removeTransaction: (id, type, transId) =>
     ipcRenderer.invoke("accounts:removeTransaction", id, type, transId),
+
+  createPerson: (data) => ipcRenderer.invoke("person:create", data),
+  getAllPersons: () => ipcRenderer.invoke("person:getAll"),
+  getPersonById: (id) => ipcRenderer.invoke("person:getById", id),
+  updatePerson: (id, data) => ipcRenderer.invoke("person:update", id, data),
+  deletePerson: (id) => ipcRenderer.invoke("person:delete", id),
 });

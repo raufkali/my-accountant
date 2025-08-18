@@ -1,7 +1,7 @@
 const { ipcMain } = require("electron");
 const ordersController = require("./controllers/ordersController");
 const accountController = require("./controllers/accountController");
-
+const personController = require("./controllers/personController");
 const serialize = (data) => JSON.parse(JSON.stringify(data));
 
 // Orders handlers
@@ -63,3 +63,27 @@ ipcMain.handle("accounts:removeTransaction", async (_, id, type, transId) =>
     await accountController.removeTransaction({ params: { id, type, transId } })
   )
 );
+ipcMain.handle("person:create", async (_, personData) => {
+  const person = await personController.createPerson(personData);
+  return serialize(person);
+});
+
+ipcMain.handle("person:getAll", async () => {
+  const persons = await personController.getAllPersons();
+  return serialize(persons);
+});
+
+ipcMain.handle("person:getById", async (_, id) => {
+  const person = await personController.getPersonById(id);
+  return serialize(person);
+});
+
+ipcMain.handle("person:update", async (_, id, personData) => {
+  const updated = await personController.updatePerson(id, personData);
+  return serialize(updated);
+});
+
+ipcMain.handle("person:delete", async (_, id) => {
+  const deleted = await personController.deletePerson(id);
+  return serialize(deleted);
+});

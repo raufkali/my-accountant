@@ -12,6 +12,11 @@ const SidePanel = () => {
             </Link>
           </li>
           <li className="nav-item">
+            <Link to="/persons" className="nav-link">
+              Persons
+            </Link>
+          </li>
+          <li className="nav-item">
             <Link to="/orders" className="nav-link">
               Orders
             </Link>
