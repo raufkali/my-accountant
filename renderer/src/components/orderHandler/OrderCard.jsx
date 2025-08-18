@@ -16,7 +16,7 @@ const OrderCard = ({ order, onDelete, onCancel, onProceed }) => {
   return (
     <div className="col-4 mb-3">
       <div
-        className={`card shadow-sm rounded-4 overflow-hidden border bg-white border-2 ${style.border}`}
+        className={`card bg-${style.bg}-light shadow-sm rounded-4 overflow-hidden border bg-white border-2 ${style.border}`}
       >
         <div
           className={`row bg-${style.bg} m-0 justify-content-end align-items-center`}
