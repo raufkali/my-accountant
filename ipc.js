@@ -1,0 +1,65 @@
+const { ipcMain } = require("electron");
+const ordersController = require("./controllers/ordersController");
+const accountController = require("./controllers/accountController");
+
+const serialize = (data) => JSON.parse(JSON.stringify(data));
+
+// Orders handlers
+ipcMain.handle("orders:getAll", async () =>
+  serialize(await ordersController.getAllOrders())
+);
+
+ipcMain.handle("orders:create", async (_, orderData) =>
+  serialize(await ordersController.createOrder(orderData))
+);
+
+ipcMain.handle("orders:delete", async (_, id) =>
+  serialize(await ordersController.deleteOrder(id))
+);
+
+ipcMain.handle("orders:update", async (_, id, updateData) =>
+  serialize(await ordersController.updateOrder(id, updateData))
+);
+
+ipcMain.handle("orders:complete", async (_, data) =>
+  serialize(await ordersController.completeOrder(data))
+);
+
+// ─── Accounts ───────────────────────────────
+ipcMain.handle("accounts:getAll", async () =>
+  serialize(await accountController.getAllAccounts())
+);
+
+ipcMain.handle("accounts:getById", async (_, id) =>
+  serialize(await accountController.getAccountById({ params: { id } }))
+);
+
+ipcMain.handle("accounts:create", async (_, accountData) =>
+  serialize(await accountController.createAccount({ body: accountData }))
+);
+
+ipcMain.handle("accounts:update", async (_, id, updateData) =>
+  serialize(
+    await accountController.updateAccount({ params: { id }, body: updateData })
+  )
+);
+
+ipcMain.handle("accounts:delete", async (_, id) =>
+  serialize(await accountController.deleteAccount({ params: { id } }))
+);
+
+// ─── Transactions ──────────────────────────
+ipcMain.handle("accounts:addTransaction", async (_, id, type, txData) =>
+  serialize(
+    await accountController.addTransaction({
+      params: { id, type },
+      body: txData,
+    })
+  )
+);
+
+ipcMain.handle("accounts:removeTransaction", async (_, id, type, transId) =>
+  serialize(
+    await accountController.removeTransaction({ params: { id, type, transId } })
+  )
+);
