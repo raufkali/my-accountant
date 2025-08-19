@@ -62,4 +62,4 @@ const sellSchema = new mongoose.Schema({
   note: String,
 });
 
-module.exports = mongoose.model(sellSchema, "SellTrx");
+module.exports = mongoose.model("SellTrx", sellSchema);

@@ -1,4 +1,4 @@
-const Sell = require("../models/Sell");
+const Sell = require("../models/SellTrx");
 const Account = require("../models/Account");
 
 // Helper: get or create account
