@@ -45,4 +45,8 @@ contextBridge.exposeInMainWorld("api", {
       }),
     delete: (id) => ipcRenderer.invoke("accounts:delete", id),
   },
+  sells: {
+    getAll: () => ipcRenderer.invoke("sells:getAll"),
+    create: (sellData) => ipcRenderer.invoke("sells:create", sellData),
+  },
 });

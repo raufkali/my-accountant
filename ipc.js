@@ -4,6 +4,7 @@ const accountController = require("./controllers/accountController");
 const personController = require("./controllers/personController");
 const serialize = (data) => JSON.parse(JSON.stringify(data));
 const accountController = require("../controllers/accountController");
+const sellController = require("../controllers/sellController");
 
 // Orders handlers
 ipcMain.handle("orders:getAll", async () =>
@@ -124,4 +125,14 @@ ipcMain.handle(
 ipcMain.handle("accounts:delete", async (_, accountId) => {
   const deleted = await accountController.deleteAccount(accountId);
   return serialize(deleted);
+});
+
+ipcMain.handle("sells:getAll", async () => {
+  const sells = await sellController.getAllSells();
+  return serialize(sells);
+});
+
+ipcMain.handle("sells:create", async (_, sellData) => {
+  const newSell = await sellController.createSell(sellData);
+  return serialize(newSell);
 });
