@@ -93,6 +93,7 @@ const SellForm = () => {
               className="form-control text-center"
               required
             />
+
             <input
               type="number"
               name="totQuantity"

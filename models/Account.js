@@ -16,6 +16,10 @@ const accountSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  product: {
+    type: Number,
+    default: 0,
+  },
   balance: {
     type: Number,
     required: true,

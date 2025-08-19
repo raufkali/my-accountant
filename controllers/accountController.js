@@ -2,11 +2,11 @@ const Account = require("../models/Account");
 
 // Create new account
 const createAccount = async (data) => {
-  const { name, balance } = data;
-  if (!name || balance == null)
-    throw new Error("Name and balance are required");
+  const { name, balance, product } = data;
+  if (!name || balance == null || product == null)
+    throw new Error("Missing Mendatory Fields!");
 
-  const account = new Account({ name, balance, transactions: {} });
+  const account = new Account({ name, balance, product, transactions: {} });
   return await account.save();
 };
 
@@ -21,25 +21,25 @@ const getAccountById = async (id) => {
 };
 
 // Add transaction (type: send, sell, receive, buy)
-const addTransaction = async (accountId, type, transaction) => {
-  const account = await Account.findById(accountId);
-  if (!account) throw new Error("Account not found");
+// const addTransaction = async (accountId, type, transaction) => {
+//   const account = await Account.findById(accountId);
+//   if (!account) throw new Error("Account not found");
 
-  if (!account.transactions[type + "Transactions"]) {
-    throw new Error("Invalid transaction type");
-  }
+//   if (!account.transactions[type + "Transactions"]) {
+//     throw new Error("Invalid transaction type");
+//   }
 
-  account.transactions[type + "Transactions"].push(transaction);
+//   account.transactions[type + "Transactions"].push(transaction);
 
-  // Update balance depending on transaction type
-  if (type === "send" || type === "sell") {
-    account.balance -= transaction.amount;
-  } else if (type === "receiver" || type === "buy") {
-    account.balance += transaction.amount;
-  }
+//   // Update balance depending on transaction type
+//   if (type === "send" || type === "sell") {
+//     account.product -= transaction.product;
+//   } else if (type === "receiver" || type === "buy") {
+//     account.balance += transaction.amount;
+//   }
 
-  return await account.save();
-};
+//   return await account.save();
+// };
 
 // Delete account
 const deleteAccount = async (id) => {

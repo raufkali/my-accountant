@@ -1,13 +1,15 @@
 const Sell = require("../models/SellTrx");
 const Account = require("../models/Account");
-
+const Person = require("../models/Person");
 // Helper: get or create account
 async function getOrCreateAccount(name) {
+  name = name.lower();
   let account = await Account.findOne({ name });
   if (!account) {
     account = new Account({
       name,
       balance: 0,
+      product: 0,
       transactions: {
         sendTransactions: [],
         sellTransactions: [],
@@ -64,7 +66,9 @@ const createSell = async (data) => {
   // Update balances depending on payingMethod
   if (payingMethod === "paid") {
     sellerAcc.balance += sellingRate * totQuantity;
+    sellerAcc.product -= totQuantity;
     buyerAcc.balance -= sellingRate * totQuantity;
+    buyerAcc.product += totQuantity;
   } else if (payingMethod === "payToDebtor") {
     // Seller doesn’t get direct payment
     // Buyer pays debtors
@@ -75,8 +79,12 @@ const createSell = async (data) => {
         amount: debtor.amount,
       });
       debtorAcc.balance += debtor.amount;
+      // sellerAcc.sendTransactions.push(debtor); <<<<<<< WIll stark working on this
       await debtorAcc.save();
     }
+  } else if (payingMethod == "unpaid") {
+    sellerAcc.balance -= sellingRate * totQuantity;
+    buyerAcc.balance += sellingRate * totQuantity;
   }
 
   await sellerAcc.save();

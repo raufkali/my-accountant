@@ -12,6 +12,7 @@ const personSchema = new mongoose.Schema(
     contact: String, // optional
     notes: String, // optional
     balance: { type: Number, default: 0 }, // running balance (optional)
+    product: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
