@@ -3,6 +3,7 @@ const ordersController = require("./controllers/ordersController");
 const accountController = require("./controllers/accountController");
 const personController = require("./controllers/personController");
 const serialize = (data) => JSON.parse(JSON.stringify(data));
+const accountController = require("../controllers/accountController");
 
 // Orders handlers
 ipcMain.handle("orders:getAll", async () =>
@@ -85,5 +86,42 @@ ipcMain.handle("person:update", async (_, id, personData) => {
 
 ipcMain.handle("person:delete", async (_, id) => {
   const deleted = await personController.deletePerson(id);
+  return serialize(deleted);
+});
+
+// Get all accounts
+ipcMain.handle("accounts:getAll", async () => {
+  const accounts = await accountController.getAllAccounts();
+  return serialize(accounts);
+});
+
+// Get account by ID
+ipcMain.handle("accounts:getById", async (_, accountId) => {
+  const account = await accountController.getAccountById(accountId);
+  return serialize(account);
+});
+
+// Create account
+ipcMain.handle("accounts:create", async (_, accountData) => {
+  const newAccount = await accountController.createAccount(accountData);
+  return serialize(newAccount);
+});
+
+// Add transaction
+ipcMain.handle(
+  "accounts:addTransaction",
+  async (_, { accountId, type, transaction }) => {
+    const updated = await accountController.addTransaction(
+      accountId,
+      type,
+      transaction
+    );
+    return serialize(updated);
+  }
+);
+
+// Delete account
+ipcMain.handle("accounts:delete", async (_, accountId) => {
+  const deleted = await accountController.deleteAccount(accountId);
   return serialize(deleted);
 });

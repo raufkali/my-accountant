@@ -1,156 +1,55 @@
 const Account = require("../models/Account");
 
-// Create a new account
-const createAccount = async (req, res) => {
-  try {
-    const { name, balance } = req.body;
+// Create new account
+const createAccount = async (data) => {
+  const { name, balance } = data;
+  if (!name || balance == null)
+    throw new Error("Name and balance are required");
 
-    if (!name || balance == null) {
-      return res.status(400).json({ error: "Name and balance are required" });
-    }
-
-    const account = new Account({
-      name,
-      balance,
-      transactions: {
-        sendTransactions: [],
-        sellTransactions: [],
-        receiverTransactions: [],
-        buyTransactions: [],
-      },
-    });
-
-    await account.save();
-    res.status(201).json(account);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+  const account = new Account({ name, balance, transactions: {} });
+  return await account.save();
 };
 
 // Get all accounts
-const getAllAccounts = async (req, res) => {
-  try {
-    const accounts = await Account.find();
-    res.json(accounts);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+const getAllAccounts = async () => {
+  return await Account.find();
 };
 
-// Get account by ID
-const getAccountById = async (req, res) => {
-  try {
-    const account = await Account.findById(req.params.id);
-    if (!account) return res.status(404).json({ error: "Account not found" });
-
-    res.json(account);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+// Get single account by ID
+const getAccountById = async (id) => {
+  return await Account.findById(id);
 };
 
-// Update account (name or balance)
-const updateAccount = async (req, res) => {
-  try {
-    const { name, balance } = req.body;
-    const account = await Account.findByIdAndUpdate(
-      req.params.id,
-      { name, balance },
-      { new: true }
-    );
+// Add transaction (type: send, sell, receive, buy)
+const addTransaction = async (accountId, type, transaction) => {
+  const account = await Account.findById(accountId);
+  if (!account) throw new Error("Account not found");
 
-    if (!account) return res.status(404).json({ error: "Account not found" });
-
-    res.json(account);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+  if (!account.transactions[type + "Transactions"]) {
+    throw new Error("Invalid transaction type");
   }
+
+  account.transactions[type + "Transactions"].push(transaction);
+
+  // Update balance depending on transaction type
+  if (type === "send" || type === "sell") {
+    account.balance -= transaction.amount;
+  } else if (type === "receiver" || type === "buy") {
+    account.balance += transaction.amount;
+  }
+
+  return await account.save();
 };
 
 // Delete account
-const deleteAccount = async (req, res) => {
-  try {
-    const account = await Account.findByIdAndDelete(req.params.id);
-    if (!account) return res.status(404).json({ error: "Account not found" });
-
-    res.json({ message: "Account deleted" });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-// Add a transaction to specific type
-const addTransaction = async (req, res) => {
-  try {
-    const { type } = req.params; // send, sell, receiver, buy
-    const { name, amount } = req.body;
-
-    if (
-      ![
-        "sendTransactions",
-        "sellTransactions",
-        "receiverTransactions",
-        "buyTransactions",
-      ].includes(type)
-    ) {
-      return res.status(400).json({ error: "Invalid transaction type" });
-    }
-
-    const account = await Account.findById(req.params.id);
-    if (!account) return res.status(404).json({ error: "Account not found" });
-
-    account.transactions[type].push({ name, amount });
-
-    // optionally update balance
-    if (type === "sendTransactions" || type === "sellTransactions") {
-      account.balance -= amount;
-    } else if (type === "receiverTransactions" || type === "buyTransactions") {
-      account.balance += amount;
-    }
-
-    await account.save();
-    res.json(account);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-// Remove a transaction
-const removeTransaction = async (req, res) => {
-  try {
-    const { type, transId } = req.params;
-
-    if (
-      ![
-        "sendTransactions",
-        "sellTransactions",
-        "receiverTransactions",
-        "buyTransactions",
-      ].includes(type)
-    ) {
-      return res.status(400).json({ error: "Invalid transaction type" });
-    }
-
-    const account = await Account.findById(req.params.id);
-    if (!account) return res.status(404).json({ error: "Account not found" });
-
-    account.transactions[type] = account.transactions[type].filter(
-      (t) => t._id.toString() !== transId
-    );
-
-    await account.save();
-    res.json(account);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+const deleteAccount = async (id) => {
+  return await Account.findByIdAndDelete(id);
 };
 
 module.exports = {
   createAccount,
   getAllAccounts,
   getAccountById,
-  updateAccount,
-  deleteAccount,
   addTransaction,
-  removeTransaction,
+  deleteAccount,
 };
