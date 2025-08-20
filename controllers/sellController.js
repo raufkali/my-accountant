@@ -3,7 +3,7 @@ const Account = require("../models/Account");
 const Person = require("../models/Person");
 // Helper: get or create account
 async function getOrCreateAccount(name) {
-  name = name.lower();
+  name = name.toLowerCase();
   let account = await Account.findOne({ name });
   if (!account) {
     account = new Account({
@@ -67,7 +67,7 @@ const createSell = async (data) => {
 
   // Update balances depending on payingMethod
   if (payingMethod === "paid") {
-    let totalAmount = totalAmount;
+    let totalAmount = sellingRate * totQuantity;
     sellerAcc.balance += totalAmount;
     buyerAcc.balance -= totalAmount;
   } else if (payingMethod === "payToDebtor") {
@@ -97,7 +97,7 @@ const createSell = async (data) => {
         });
       }
       // dealing with debitors and creditors:
-      debtorAcc.creditors.map((entry, index) => {
+      debtorAcc.creditors.foreach((entry) => {
         // find will check if the debtor is actually debtor or not
         let find = false;
         if (entry.name == sellerName) {
