@@ -7,7 +7,7 @@ const personController = require("./controllers/personController");
 const sellController = require("./controllers/sellController");
 const buyController = require("./controllers/buyController");
 const sendController = require("./controllers/sendController");
-const receiveController = require("./controllers/receiveController");
+const receiveController = require("./controllers/recieveController");
 
 // Simple serializer to strip mongoose metadata
 const serialize = (data) => JSON.parse(JSON.stringify(data));

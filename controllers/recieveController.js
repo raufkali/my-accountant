@@ -1,4 +1,4 @@
-const Receive = require("../models/ReceiveTrx");
+const Receive = require("../models/RecieveTrx");
 const Account = require("../models/Account");
 
 async function getOrCreateAccount(name) {
