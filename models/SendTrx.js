@@ -1,11 +1,11 @@
 const mongoose = require("mongoose");
 
-const receiveSchema = new mongoose.Schema({
-  receiverName: { type: String, required: true },
+const sendSchema = new mongoose.Schema({
   senderName: { type: String, required: true },
+  receiverName: { type: String, required: true },
   amount: { type: Number, required: true },
   note: { type: String },
   date: { type: Date, default: Date.now },
 });
 
-module.exports = mongoose.model("ReceiveTrx", receiveSchema);
+module.exports = mongoose.model("SendTrx", sendSchema);
