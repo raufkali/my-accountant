@@ -1,6 +1,7 @@
 const Sell = require("../models/SellTrx");
 const Account = require("../models/Account");
 const Person = require("../models/Person");
+
 // Helper: get or create account
 async function getOrCreateAccount(name) {
   name = name.toLowerCase();
@@ -36,6 +37,8 @@ const createSell = async (data) => {
     note,
   } = data;
 
+  const totalAmount = sellingRate * totQuantity;
+
   // 1. Save in Sell collection
   const sellTxn = new Sell({
     sellerName,
@@ -56,88 +59,112 @@ const createSell = async (data) => {
   // 3. Add to seller's Sell Transactions
   sellerAcc.transactions.sellTransactions.push({
     name: buyerName,
-    amount: sellingRate * totQuantity,
+    amount: totalAmount,
+    trxId: sellTxn._id,
+    note,
+    date: new Date(),
   });
 
   // 4. Add to buyer's Buy Transactions
   buyerAcc.transactions.buyTransactions.push({
     name: sellerName,
-    amount: sellingRate * totQuantity,
+    amount: totalAmount,
+    trxId: sellTxn._id,
+    note,
+    date: new Date(),
   });
 
-  // Update balances depending on payingMethod
+  // 5. Update balances depending on payingMethod
   if (payingMethod === "paid") {
-    let totalAmount = sellingRate * totQuantity;
     sellerAcc.balance += totalAmount;
     buyerAcc.balance -= totalAmount;
-  } else if (payingMethod === "payToDebtor") {
-    // Seller doesn’t get direct payment
-    // Buyer pays debtors
+  } else if (payingMethod === "payToDebtor" && debtors) {
+    // Buyer pays debtors directly
     for (let debtor of debtors) {
-      // create accounts for debtor
       const debtorAcc = await getOrCreateAccount(debtor.name);
-      // debtor balance increases while buyer as a sender balance decreases
+
       debtorAcc.balance += debtor.amount;
       buyerAcc.balance -= debtor.amount;
-      // in case the debtor is not seller
-      if (debtor.name != sellerName) {
+
+      if (debtor.name !== sellerName) {
         sellerAcc.transactions.sendTransactions.push({
           name: debtor.name,
           amount: debtor.amount,
+          trxId: sellTxn._id,
+          note,
+          date: new Date(),
         });
         debtorAcc.transactions.receiverTransactions.push({
           name: buyerName,
           amount: debtor.amount,
+          trxId: sellTxn._id,
+          note,
+          date: new Date(),
         });
       } else {
-        // in case the debtor is seller
+        // debtor is actually the seller
         debtorAcc.transactions.receiverTransactions.push({
-          name: sellerAcc.name,
+          name: buyerName,
           amount: debtor.amount,
+          trxId: sellTxn._id,
+          note,
+          date: new Date(),
         });
       }
-      // dealing with debitors and creditors:
-      debtorAcc.creditors.foreach((entry) => {
-        // find will check if the debtor is actually debtor or not
-        let find = false;
-        if (entry.name == sellerName) {
-          find = true;
-          let amount = entry.amount - debtor.amount;
-          if (amount >= 0) {
-            entry.amount = amount;
+
+      // Update creditors/debitors relation
+      debtorAcc.creditors.forEach((entry) => {
+        let found = false;
+        if (entry.name === sellerName) {
+          found = true;
+          let remaining = entry.amount - debtor.amount;
+          if (remaining >= 0) {
+            entry.amount = remaining;
           } else {
-            // it means the amount paid was more then the actual amount
-            // therefore he/she become creditor for seller
             entry.amount = 0;
             sellerAcc.creditors.push({
               name: entry.name,
-              amount: amount * -1, // will make it positive if is negative
+              amount: Math.abs(remaining),
+              trxId: sellTxn._id,
+              date: new Date(),
+              note,
             });
           }
         }
-        // if the money is sended but the entry is not in debtors
-        if (!find) {
-          // he/she become creditor to buyer
+        if (!found) {
           sellerAcc.creditors.push({
             name: debtor.name,
             amount: debtor.amount,
+            trxId: sellTxn._id,
+            date: new Date(),
+            note,
           });
         }
       });
+
       await debtorAcc.save();
     }
-  } else if (payingMethod == "unpaid") {
+  } else if (payingMethod === "unpaid") {
     sellerAcc.creditors.push({
       name: buyerName,
       amount: totalAmount,
+      trxId: sellTxn._id,
+      note,
+      date: new Date(),
     });
     buyerAcc.debitors.push({
       name: sellerName,
       amount: totalAmount,
+      trxId: sellTxn._id,
+      note,
+      date: new Date(),
     });
   }
+
+  // 6. Product updates
   sellerAcc.product -= totQuantity;
   buyerAcc.product += totQuantity;
+
   await sellerAcc.save();
   await buyerAcc.save();
 
