@@ -15,17 +15,19 @@ const SellForm = () => {
 
   // handle main form fields
   const handleChange = (e) => {
-    setForm({
-      ...form,
+    setForm((prev) => ({
+      ...prev,
       [e.target.name]: e.target.value,
-    });
+    }));
   };
 
   // handle debtor fields
   const handleDebtorChange = (index, field, value) => {
-    const updated = [...debtors];
-    updated[index] = { ...updated[index], [field]: value };
-    setDebtors(updated);
+    setDebtors((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
   };
 
   // submit
@@ -36,12 +38,18 @@ const SellForm = () => {
         ...form,
         sellingRate: Number(form.sellingRate),
         totQuantity: Number(form.totQuantity),
-        payingMethod: form.payingMethod,
-        debtors: form.payingMethod === "payToDebtor" ? debtors : [],
+        debtors:
+          form.payingMethod === "payToDebtor"
+            ? debtors.map((d) => ({
+                name: d.name,
+                amount: Number(d.amount),
+              }))
+            : [],
       };
+
       await window.api.sells.create(payload);
-      alert("Sell transaction created ✅");
-      // reset form
+
+      // reset
       setForm({
         sellerName: "",
         buyerName: "",
@@ -55,7 +63,6 @@ const SellForm = () => {
       setDebtors([]);
     } catch (err) {
       console.error("Error creating sell transaction:", err);
-      alert("Failed to create transaction ❌");
     }
   };
 
@@ -93,7 +100,6 @@ const SellForm = () => {
               className="form-control text-center"
               required
             />
-
             <input
               type="number"
               name="totQuantity"
@@ -122,7 +128,7 @@ const SellForm = () => {
               onChange={(e) => {
                 handleChange(e);
                 if (e.target.value === "payToDebtor") {
-                  setTotDebtors(1); // default to 1 debtor
+                  setTotDebtors(1);
                   setDebtors([{ name: "", amount: "" }]);
                 } else {
                   setTotDebtors(0);
@@ -145,12 +151,12 @@ const SellForm = () => {
                 placeholder="Enter number of Debtors"
                 className="form-control text-center"
                 onChange={(e) => {
-                  const count = Number(e.target.value);
+                  const count = Math.max(1, Number(e.target.value));
                   setTotDebtors(count);
-                  setDebtors(
+                  setDebtors((prev) =>
                     Array.from(
                       { length: count },
-                      (_, i) => debtors[i] || { name: "", amount: "" }
+                      (_, i) => prev[i] || { name: "", amount: "" }
                     )
                   );
                 }}
