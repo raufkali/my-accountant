@@ -16,6 +16,8 @@ async function getOrCreateAccount(name) {
         receiverTransactions: [],
         buyTransactions: [],
       },
+      debitors: [],
+      creditors: [],
     });
     await account.save();
   }
@@ -65,28 +67,77 @@ const createSell = async (data) => {
 
   // Update balances depending on payingMethod
   if (payingMethod === "paid") {
-    sellerAcc.balance += sellingRate * totQuantity;
-    sellerAcc.product -= totQuantity;
-    buyerAcc.balance -= sellingRate * totQuantity;
-    buyerAcc.product += totQuantity;
+    let totalAmount = totalAmount;
+    sellerAcc.balance += totalAmount;
+    buyerAcc.balance -= totalAmount;
   } else if (payingMethod === "payToDebtor") {
     // Seller doesn’t get direct payment
     // Buyer pays debtors
     for (let debtor of debtors) {
+      // create accounts for debtor
       const debtorAcc = await getOrCreateAccount(debtor.name);
-      debtorAcc.transactions.receiverTransactions.push({
-        name: buyerName,
-        amount: debtor.amount,
-      });
+      // debtor balance increases while buyer as a sender balance decreases
       debtorAcc.balance += debtor.amount;
-      // sellerAcc.sendTransactions.push(debtor); <<<<<<< WIll stark working on this
+      buyerAcc.balance -= debtor.amount;
+      // in case the debtor is not seller
+      if (debtor.name != sellerName) {
+        sellerAcc.transactions.sendTransactions.push({
+          name: debtor.name,
+          amount: debtor.amount,
+        });
+        debtorAcc.transactions.receiverTransactions.push({
+          name: buyerName,
+          amount: debtor.amount,
+        });
+      } else {
+        // in case the debtor is seller
+        debtorAcc.transactions.receiverTransactions.push({
+          name: sellerAcc.name,
+          amount: debtor.amount,
+        });
+      }
+      // dealing with debitors and creditors:
+      debtorAcc.creditors.map((entry, index) => {
+        // find will check if the debtor is actually debtor or not
+        let find = false;
+        if (entry.name == sellerName) {
+          find = true;
+          let amount = entry.amount - debtor.amount;
+          if (amount >= 0) {
+            entry.amount = amount;
+          } else {
+            // it means the amount paid was more then the actual amount
+            // therefore he/she become creditor for seller
+            entry.amount = 0;
+            sellerAcc.creditors.push({
+              name: entry.name,
+              amount: amount * -1, // will make it positive if is negative
+            });
+          }
+        }
+        // if the money is sended but the entry is not in debtors
+        if (!find) {
+          // he/she become creditor to buyer
+          sellerAcc.creditors.push({
+            name: debtor.name,
+            amount: debtor.amount,
+          });
+        }
+      });
       await debtorAcc.save();
     }
   } else if (payingMethod == "unpaid") {
-    sellerAcc.balance -= sellingRate * totQuantity;
-    buyerAcc.balance += sellingRate * totQuantity;
+    sellerAcc.creditors.push({
+      name: buyerName,
+      amount: totalAmount,
+    });
+    buyerAcc.debitors.push({
+      name: sellerName,
+      amount: totalAmount,
+    });
   }
-
+  sellerAcc.product -= totQuantity;
+  buyerAcc.product += totQuantity;
   await sellerAcc.save();
   await buyerAcc.save();
 

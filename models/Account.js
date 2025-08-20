@@ -30,6 +30,8 @@ const accountSchema = new mongoose.Schema({
     receiverTransactions: [transactionSchema],
     buyTransactions: [transactionSchema],
   },
+  debitors: [transactionSchema],
+  creditors: [transactionSchema],
 });
 
 module.exports = mongoose.model("Account", accountSchema);
