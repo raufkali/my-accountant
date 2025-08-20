@@ -1,8 +1,13 @@
 const { ipcMain } = require("electron");
+
+// Controllers
 const ordersController = require("./controllers/ordersController");
 const accountController = require("./controllers/accountController");
 const personController = require("./controllers/personController");
 const sellController = require("./controllers/sellController");
+const buyController = require("./controllers/buyController");
+const sendController = require("./controllers/sendController");
+const receiveController = require("./controllers/receiveController");
 
 // Simple serializer to strip mongoose metadata
 const serialize = (data) => JSON.parse(JSON.stringify(data));
@@ -89,4 +94,31 @@ ipcMain.handle("sells:getAll", async () =>
 
 ipcMain.handle("sells:create", async (_, sellData) =>
   serialize(await sellController.createSell(sellData))
+);
+
+// ─── Buys ───────────────────────────────
+ipcMain.handle("buys:getAll", async () =>
+  serialize(await buyController.getAllBuys())
+);
+
+ipcMain.handle("buys:create", async (_, buyData) =>
+  serialize(await buyController.createBuy(buyData))
+);
+
+// ─── Sends ───────────────────────────────
+ipcMain.handle("sends:getAll", async () =>
+  serialize(await sendController.getAllSends())
+);
+
+ipcMain.handle("sends:create", async (_, sendData) =>
+  serialize(await sendController.createSend(sendData))
+);
+
+// ─── Receives ───────────────────────────────
+ipcMain.handle("receives:getAll", async () =>
+  serialize(await receiveController.getAllReceives())
+);
+
+ipcMain.handle("receives:create", async (_, receiveData) =>
+  serialize(await receiveController.createReceive(receiveData))
 );
