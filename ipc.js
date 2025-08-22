@@ -66,27 +66,6 @@ ipcMain.handle("accounts:removeTransaction", async (_, { id, type, transId }) =>
   serialize(await accountController.removeTransaction(id, type, transId))
 );
 
-// ─── Persons ───────────────────────────────
-ipcMain.handle("person:create", async (_, data) =>
-  serialize(await personController.createPerson(data))
-);
-
-ipcMain.handle("person:getAll", async () =>
-  serialize(await personController.getAllPersons())
-);
-
-ipcMain.handle("person:getById", async (_, id) =>
-  serialize(await personController.getPersonById(id))
-);
-
-ipcMain.handle("person:update", async (_, id, data) =>
-  serialize(await personController.updatePerson(id, data))
-);
-
-ipcMain.handle("person:delete", async (_, id) =>
-  serialize(await personController.deletePerson(id))
-);
-
 // ─── Sells ───────────────────────────────
 ipcMain.handle("sells:getAll", async () =>
   serialize(await sellController.getAllSells())

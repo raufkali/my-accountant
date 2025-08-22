@@ -88,9 +88,15 @@ const updateOrder = async (id, updateData) => {
 
 const completeOrder = async ({ id, quantity, rate, receiver, pay }) => {
   try {
+    // Ensure numeric values
     const completionQuantity = Number(quantity);
     const completionRate = Number(rate);
     const completionAmount = completionQuantity * completionRate;
+
+    if (!id || !completionQuantity || !completionRate || !receiver) {
+      console.error("Missing required fields for completing order");
+      return null;
+    }
 
     const order = await Order.findById(id);
     if (!order) {
@@ -98,8 +104,9 @@ const completeOrder = async ({ id, quantity, rate, receiver, pay }) => {
       return null;
     }
 
-    const orderBy = order.orderBy;
+    const orderFrom = order.orderFrom;
     const orderTo = order.orderTo;
+    const receiverName = String(receiver).trim().toLowerCase();
 
     // Update order status
     const updatedOrder = await Order.findByIdAndUpdate(
@@ -108,113 +115,103 @@ const completeOrder = async ({ id, quantity, rate, receiver, pay }) => {
         completionQuantity,
         completionRate,
         completionAmount,
-        receiver: String(receiver).trim(),
+        receiver: receiverName,
         status: "completed",
         pay,
       },
-      { new: true }
+      { new: true, runValidators: true }
     ).lean();
 
-    // Ensure accounts exist
-    let orderByAcc = await Account.findOne({ name: orderBy });
-    if (!orderByAcc) {
-      orderByAcc = await Account.create({
-        name: orderBy,
-        balance: 0,
-        product: 0,
-        transactions: {
-          sendTransactions: [],
-          sellTransactions: [],
-          receiverTransactions: [],
-          buyTransactions: [],
-        },
-        debitors: [],
-        creditors: [],
-      });
-    }
+    // Helper to initialize account if missing
+    const ensureAccount = async (name) => {
+      if (!name) return null;
+      let acc = await Account.findOne({ name });
+      if (!acc) {
+        acc = await Account.create({
+          name,
+          balance: 0,
+          product: 0,
+          transactions: {
+            sendTransactions: [],
+            sellTransactions: [],
+            receiverTransactions: [],
+            buyTransactions: [],
+          },
+          debitors: [],
+          creditors: [],
+        });
+      }
+      return acc;
+    };
 
-    let orderToAcc = await Account.findOne({ name: orderTo });
-    if (!orderToAcc) {
-      orderToAcc = await Account.create({
-        name: orderTo,
-        balance: 0,
-        product: 0,
-        transactions: {
-          sendTransactions: [],
-          sellTransactions: [],
-          receiverTransactions: [],
-          buyTransactions: [],
-        },
-        debitors: [],
-        creditors: [],
-      });
-    }
+    const orderFromAcc = await ensureAccount(orderFrom);
+    const orderToAcc = await ensureAccount(orderTo);
+    const receiverAcc = await ensureAccount(receiverName);
 
-    let receiverAcc = await Account.findOne({ name: receiver });
     if (!receiverAcc) {
-      receiverAcc = await Account.create({
-        name: receiver,
-        balance: 0,
-        product: 0,
-        transactions: {
-          sendTransactions: [],
-          sellTransactions: [],
-          receiverTransactions: [],
-          buyTransactions: [],
-        },
-        debitors: [],
-        creditors: [],
-      });
+      console.error("Receiver account could not be created");
+      return null;
     }
 
     // Products are with receiver
     receiverAcc.product += completionQuantity;
+    orderFromAcc.product -= completionQuantity;
 
-    // Handle orderBy
+    // Handle balances and debts
     if (pay) {
-      orderByAcc.balance += completionAmount; // Paid → add balance
+      if (orderFromAcc) {
+        orderFromAcc.balance += completionAmount;
+        orderToAcc.balance -= completionAmount;
+      }
+      // Paid → add balance
     } else {
-      // Not paid → receiver becomes creditor
-      receiverAcc.creditors.push({
-        name: orderBy,
-        amount: completionAmount,
-        trxId: updatedOrder._id,
-        note: "Unpaid order received",
-      });
-      orderByAcc.debitors.push({
-        name: receiver,
-        amount: completionAmount,
-        trxId: updatedOrder._id,
-        note: "Receiver is creditor for unpaid order",
-      });
+      if (receiverAcc && orderFromAcc) {
+        orderToAcc.transactions.creditors.push({
+          name: orderTo,
+          amount: completionAmount,
+          trxId: updatedOrder._id,
+          note: "product deducted but payment not recieved",
+        });
+
+        orderFromAcc.transactions.debitors.push({
+          name: orderFrom,
+          amount: completionAmount,
+          trxId: updatedOrder._id,
+          note: "Order Giver is Debitor for unpaid order",
+        });
+      }
     }
 
     // Transactions
-    orderByAcc.sellTransactions.push({
-      name: receiver,
-      amount: completionAmount,
-      trxId: updatedOrder._id,
-      note: pay ? "Order paid" : "Order unpaid",
-    });
+    if (orderFromAcc) {
+      orderFromAcc.transactions.sellTransactions.push({
+        name: receiverName,
+        amount: completionAmount,
+        trxId: updatedOrder._id,
+        note: pay ? "Order paid" : "Order unpaid",
+      });
+      await orderFromAcc.save();
+    }
 
-    orderToAcc.buyTransactions.push({
-      name: receiver,
-      amount: completionAmount,
-      trxId: updatedOrder._id,
-      note: "Order received",
-    });
+    if (orderToAcc) {
+      orderToAcc.transactions.buyTransactions.push({
+        name: receiverName,
+        amount: completionAmount,
+        trxId: updatedOrder._id,
+        note: "Order received",
+      });
+      await orderToAcc.save();
+    }
 
-    receiverAcc.receiverTransactions.push({
-      name: orderBy,
-      amount: completionAmount,
-      trxId: updatedOrder._id,
-      note: "Products received",
-    });
-
-    // Save all
-    await orderByAcc.save();
-    await orderToAcc.save();
-    await receiverAcc.save();
+    if (receiverAcc) {
+      receiverAcc.transactions.receiverTransactions.push({
+        name: orderFrom,
+        amount: completionAmount,
+        trxId: updatedOrder._id,
+        note: "Products received",
+      });
+      await receiverAcc.save();
+    }
 
     return updatedOrder;
   } catch (err) {
