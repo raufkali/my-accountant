@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-const BuyForm = () => {
+const BuyForm = ({ onSubmit }) => {
   const [form, setForm] = useState({
     buyerName: "",
     sellerName: "",
@@ -39,10 +39,11 @@ const BuyForm = () => {
         totQuantity: Number(form.totQuantity),
         debtors: form.payingMethod === "payToDebtor" ? debtors : [],
       };
+
       await window.api.buys.create(payload); // call backend
       alert("Buy transaction created ✅");
 
-      // reset
+      // reset form
       setForm({
         buyerName: "",
         sellerName: "",
@@ -54,6 +55,9 @@ const BuyForm = () => {
       });
       setTotDebtors(0);
       setDebtors([]);
+
+      // notify parent to reload Journal
+      if (onSubmit) onSubmit();
     } catch (err) {
       console.error("Error creating buy transaction:", err);
       alert("Failed to create transaction ❌");
@@ -65,6 +69,7 @@ const BuyForm = () => {
       <h4>Buying Form</h4>
       <form onSubmit={handleSubmit}>
         <div className="row gap-2">
+          {/* Main Inputs */}
           <div className="col-12 d-flex gap-2">
             <input
               type="text"
@@ -104,6 +109,7 @@ const BuyForm = () => {
             />
           </div>
 
+          {/* Date and Paying Method */}
           <div className="col-12 d-flex gap-2">
             <input
               type="date"
@@ -119,7 +125,8 @@ const BuyForm = () => {
               className="form-select text-center"
               onChange={(e) => {
                 handleChange(e);
-                if (e.target.value === "payToDebtor") {
+                const method = e.target.value;
+                if (method === "payToDebtor") {
                   setTotDebtors(1);
                   setDebtors([{ name: "", amount: "" }]);
                 } else {
@@ -135,12 +142,13 @@ const BuyForm = () => {
               <option value="payToDebtor">Pay to Debtor</option>
             </select>
 
+            {/* Number of Debtors */}
             {form.payingMethod === "payToDebtor" && (
               <input
                 type="number"
                 value={totDebtors}
                 min={1}
-                placeholder="Enter number of Debtors"
+                placeholder="Number of Debtors"
                 className="form-control text-center"
                 onChange={(e) => {
                   const count = Number(e.target.value);
@@ -187,6 +195,7 @@ const BuyForm = () => {
             </div>
           )}
 
+          {/* Note and Submit */}
           <div className="col-12 d-flex gap-2">
             <input
               type="text"

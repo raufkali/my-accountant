@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 
-const Journal = () => {
+const Journal = ({ reload }) => {
   const [entries, setEntries] = useState([]);
 
   useEffect(() => {
@@ -14,48 +14,72 @@ const Journal = () => {
           window.api.receives.getAll(),
         ]);
 
-        // normalize data into a common format
         let formatted = [];
 
-        formatted = formatted.concat(
-          sells.map((sell, idx) => ({
+        // Sell transactions
+        sells.forEach((sell, idx) => {
+          const totalAmount = sell.sellingRate * sell.totQuantity;
+          const productCount = sell.totQuantity;
+          const debtorsInfo =
+            sell.debtors?.map((d) => `${d.name}: ${d.amount}`).join(", ") ||
+            "-";
+
+          formatted.push({
             id: `S-${idx + 1}`,
             buyer: sell.buyerName,
             seller: sell.sellerName,
             type: "Sell",
-            amount: sell.sellingRate * sell.totQuantity,
-          }))
-        );
+            amount: totalAmount,
+            products: productCount,
+            debtors: debtorsInfo,
+            note: sell.note || "-", // ✅ include note
+          });
+        });
 
-        formatted = formatted.concat(
-          buys.map((buy, idx) => ({
+        // Buy transactions
+        buys.forEach((buy, idx) => {
+          const totalAmount = buy.buyingRate * buy.totQuantity;
+          const productCount = buy.totQuantity;
+
+          formatted.push({
             id: `B-${idx + 1}`,
             buyer: buy.buyerName,
             seller: buy.sellerName,
             type: "Buy",
-            amount: buy.buyingRate * buy.totQuantity,
-          }))
-        );
+            amount: totalAmount,
+            products: productCount,
+            debtors: "-", // typically not applicable
+            note: buy.note || "-",
+          });
+        });
 
-        formatted = formatted.concat(
-          sends.map((send, idx) => ({
+        // Send transactions
+        sends.forEach((send, idx) => {
+          formatted.push({
             id: `SD-${idx + 1}`,
             buyer: send.receiverName,
             seller: send.senderName,
             type: "Send",
             amount: send.amount,
-          }))
-        );
+            products: "-", // not applicable
+            debtors: "-",
+            note: send.note || "-",
+          });
+        });
 
-        formatted = formatted.concat(
-          receives.map((rec, idx) => ({
+        // Receive transactions
+        receives.forEach((rec, idx) => {
+          formatted.push({
             id: `R-${idx + 1}`,
             buyer: rec.receiverName,
             seller: rec.senderName,
             type: "Receive",
             amount: rec.amount,
-          }))
-        );
+            products: "-", // not applicable
+            debtors: "-",
+            note: rec.note || "-",
+          });
+        });
 
         setEntries(formatted);
       } catch (error) {
@@ -64,7 +88,7 @@ const Journal = () => {
     };
 
     fetchData();
-  }, []);
+  }, onchange);
 
   return (
     <div className="journal container mt-4">
@@ -76,22 +100,38 @@ const Journal = () => {
             <th>Seller / Sender</th>
             <th>Type</th>
             <th>Amount</th>
+            <th>Products</th>
+            <th>Debtors</th>
           </tr>
         </thead>
         <tbody>
           {entries.length > 0 ? (
             entries.map((entry, idx) => (
-              <tr key={entry.id} className="text-center">
-                <td>{idx + 1}</td>
-                <td>{entry.buyer}</td>
-                <td>{entry.seller}</td>
-                <td>{entry.type}</td>
-                <td>{entry.amount}</td>
-              </tr>
+              <React.Fragment key={entry.id}>
+                {/* Main transaction row */}
+                <tr className="text-center">
+                  <td>{idx + 1}</td>
+                  <td>{entry.buyer}</td>
+                  <td>{entry.seller}</td>
+                  <td>{entry.type}</td>
+                  <td>{entry.amount}</td>
+                  <td>{entry.products}</td>
+                  <td>{entry.debtors}</td>
+                </tr>
+
+                {/* Note / Description row */}
+                {entry.note && entry.note !== "-" && (
+                  <tr className="text-center">
+                    <td colSpan="7" className="text-center">
+                      {entry.note}
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
             ))
           ) : (
             <tr>
-              <td colSpan="5" className="text-center">
+              <td colSpan="7" className="text-center">
                 No transactions yet
               </td>
             </tr>

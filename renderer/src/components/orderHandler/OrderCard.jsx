@@ -35,7 +35,10 @@ const OrderCard = ({ order, onDelete, onCancel, onProceed }) => {
         </div>
         <div className="row p-2">
           <h5 className={`card-title ${style.text}`}>
-            Ordered By {order.name}
+            Ordered By {order.orderBy}
+          </h5>
+          <h5 className={`card-title ${style.text}`}>
+            Ordered To {order.orderTo}
           </h5>
           <div className="card-body">
             <h6>Ordered Quantity: {order.quantity} Dirham</h6>

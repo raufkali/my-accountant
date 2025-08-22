@@ -7,6 +7,12 @@ import Journal from "./Journal";
 
 const Transactions = () => {
   const [type, setType] = useState("");
+  const [reloadJournal, setReloadJournal] = useState(false);
+
+  const handleReload = () => {
+    // Toggle state to force Journal reload
+    setReloadJournal((prev) => !prev);
+  };
 
   return (
     <div className="main-content py-4 pe-4 text-center">
@@ -27,18 +33,24 @@ const Transactions = () => {
           </select>
 
           <div className="row">
-            <div className="col-12">{type === "sell" && <SellForm />}</div>
-            <div className="col-12">{type === "buy" && <BuyForm />}</div>
-            <div className="col-12">{type === "send" && <SendForm />}</div>
             <div className="col-12">
-              {type === "recieve" && <RecieveForm />}
+              {type === "sell" && <SellForm onSubmit={handleReload} />}
+            </div>
+            <div className="col-12">
+              {type === "buy" && <BuyForm onSubmit={handleReload} />}
+            </div>
+            <div className="col-12">
+              {type === "send" && <SendForm onSubmit={handleReload} />}
+            </div>
+            <div className="col-12">
+              {type === "recieve" && <RecieveForm onSubmit={handleReload} />}
             </div>
           </div>
         </div>
 
         <div className="p-4 shadow-sm mt-4 bg-white border-2">
           <h3 className="mb-3">All Transactions</h3>
-          <Journal />
+          <Journal reload={reloadJournal} />
         </div>
       </div>
     </div>

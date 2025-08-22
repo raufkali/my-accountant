@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-const SellForm = () => {
+const SellForm = ({ onSubmit }) => {
   const [form, setForm] = useState({
     sellerName: "",
     buyerName: "",
@@ -61,6 +61,7 @@ const SellForm = () => {
       });
       setTotDebtors(0);
       setDebtors([]);
+      if (onSubmit) onSubmit();
     } catch (err) {
       console.error("Error creating sell transaction:", err);
     }

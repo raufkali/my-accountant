@@ -28,7 +28,8 @@ const Orders = () => {
 
   // Form states
   const [newOrder, setNewOrder] = useState({
-    name: "",
+    orderFrom: "",
+    orderTo: "",
     rate: "",
     quantity: "",
   });
@@ -37,9 +38,10 @@ const Orders = () => {
     quantity: "",
     rate: "",
     receiver: "",
-    pay: "",
-    amount: "",
+    pay: false,
+    amount: 0,
   });
+
   const [selectedOrderId, setSelectedOrderId] = useState(null);
 
   const proceedModalRef = useRef(null);
@@ -63,7 +65,7 @@ const Orders = () => {
   // Load Orders
   const loadOrders = async () => {
     try {
-      const data = await window.api.getOrders();
+      const data = await window.api.orders.getAll();
       setOrders(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Error loading orders:", err);
@@ -79,13 +81,10 @@ const Orders = () => {
 
   // Proceed form change
   const handleProceedChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setProceedData((prev) => {
-      const next = { ...prev, [name]: value };
+      const next = { ...prev, [name]: type === "checkbox" ? checked : value };
 
-      if (name === "pay") {
-        console.log("Pay field changed:", value); // 🔍 Debug here
-      }
       if (name === "quantity" || name === "rate") {
         const qty = Number(next.quantity) || 0;
         const rate = Number(next.rate) || 0;
@@ -99,13 +98,19 @@ const Orders = () => {
   // Add Order
   const handleAddOrder = async (e) => {
     e.preventDefault();
-    if (!newOrder.name || !newOrder.rate || !newOrder.quantity) {
-      alert("Please fill in all fields");
+    if (
+      !newOrder.orderFrom.trim() ||
+      !newOrder.orderTo.trim() ||
+      Number(newOrder.rate) <= 0 ||
+      Number(newOrder.quantity) <= 0
+    ) {
+      alert("Please fill in all fields correctly");
       return;
     }
 
     const orderToSend = {
-      name: String(newOrder.name).trim(),
+      orderFrom: String(newOrder.orderFrom).trim(),
+      orderTo: String(newOrder.orderTo).trim(),
       rate: Number(newOrder.rate),
       quantity: Number(newOrder.quantity),
       status: "pending",
@@ -113,9 +118,9 @@ const Orders = () => {
     };
 
     try {
-      await window.api.addOrder(orderToSend);
+      await window.api.orders.create(orderToSend);
       await loadOrders();
-      setNewOrder({ name: "", rate: 0, quantity: 0 });
+      setNewOrder({ orderFrom: "", orderTo: "", rate: 0, quantity: 0 });
     } catch (err) {
       console.error("Error adding order:", err);
     }
@@ -127,11 +132,10 @@ const Orders = () => {
     setProceedData({
       quantity: "",
       rate: "",
-      pay: "",
+      pay: false,
       receiver: "",
-      amount: "",
+      amount: 0,
     });
-
     modalInstanceRef.current?.show();
   };
 
@@ -140,9 +144,7 @@ const Orders = () => {
     if (!selectedOrderId) return;
 
     try {
-      console.log("ProceedData at submit:", proceedData);
-
-      await window.api.completeOrder({
+      await window.api.orders.complete({
         id: selectedOrderId,
         quantity: Number(proceedData.quantity),
         rate: Number(proceedData.rate),
@@ -161,7 +163,7 @@ const Orders = () => {
   const handleDeleteOrder = async (id) => {
     if (!id) return;
     try {
-      await window.api.deleteOrder(id);
+      await window.api.orders.delete(id);
       setOrders((prev) => prev.filter((o) => o._id !== id));
     } catch (err) {
       console.error("Error deleting order:", err);
@@ -171,9 +173,8 @@ const Orders = () => {
   // Cancel
   const handleCancel = async (id) => {
     if (!id) return;
-
     try {
-      await window.api.updateOrder(id, { status: "cancelled" });
+      await window.api.orders.update(id, { status: "cancelled" });
       setOrders((prev) =>
         prev.map((o) => (o._id === id ? { ...o, status: "cancelled" } : o))
       );

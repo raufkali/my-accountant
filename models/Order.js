@@ -1,16 +1,11 @@
 const mongoose = require("mongoose");
 mongoose.models = {};
 const OrderSchema = new mongoose.Schema({
-  // person: {
-  //   type: mongoose.Schema.Types.ObjectId,
-  //   ref: "Person",
-  //   required: true,
-  // },
-
-  name: { type: String, required: true },
+  orderFrom: { type: String, required: true },
+  orderTo: { type: String, required: true, default: "jawad" },
   rate: { type: Number, required: true },
   quantity: { type: Number, required: true },
-  total: { type: Number, required: true },
+  total: { type: Number },
   status: {
     type: String,
     enum: ["pending", "completed", "cancelled"],

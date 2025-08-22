@@ -3,23 +3,54 @@ import "./Accounts.css";
 
 const Accounts = () => {
   const [accounts, setAccounts] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [newAccount, setNewAccount] = useState({
+    name: "",
+    balance: 0,
+    product: 0,
+  });
 
   useEffect(() => {
     const fetchAccounts = async () => {
       try {
-        // ✅ preload uses window.api.accounts.getAll()
         const data = await window.api.accounts.getAll();
         setAccounts(data);
       } catch (err) {
         console.error("Error fetching accounts:", err);
       }
     };
-
     fetchAccounts();
   }, []);
 
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewAccount({ ...newAccount, [name]: value });
+  };
+
+  const handleSaveAccount = async () => {
+    try {
+      const accountToSave = {
+        ...newAccount,
+        name: newAccount.name.toLowerCase(), // ✅ convert to lowercase
+      };
+      const created = await window.api.accounts.create(accountToSave); // ✅ preload API
+      setAccounts([...accounts, created]);
+      setShowModal(false);
+      setNewAccount({ name: "", balance: 0, product: 0 });
+    } catch (err) {
+      console.error("Error creating account:", err);
+    }
+  };
+
   return (
     <div className="main-content pe-4 pt-4 bg-light">
+      {/* ✅ Top-right Add Button */}
+      <div className="d-flex justify-content-end mb-3 me-4">
+        <button className="btn btn-dark" onClick={() => setShowModal(true)}>
+          + Add Account
+        </button>
+      </div>
+
       <div className="row account-container bg-light gap-4 d-flex flex-column align-items-center">
         {accounts && accounts.length > 0 ? (
           accounts.map((acc) => (
@@ -31,13 +62,16 @@ const Accounts = () => {
               <h5 className={acc.balance > 0 ? "text-success" : "text-danger"}>
                 Total Balance: {acc.balance ?? 0}
               </h5>
+              <h5 className={acc.balance > 0 ? "text-success" : "text-danger"}>
+                Total Products: {acc.product ?? 0}
+              </h5>
 
-              {/* ✅ Transactions grouped by type */}
+              {/* ✅ Transactions Sections */}
               {acc.transactions?.sendTransactions?.length > 0 && (
                 <>
                   <h4>Send Transactions</h4>
                   <TransactionTable
-                    headers={["#", "Receiver", "Amount"]}
+                    headers={["#", "Receiver", "Amount", "Date", "Note"]}
                     data={acc.transactions.sendTransactions}
                   />
                 </>
@@ -47,7 +81,7 @@ const Accounts = () => {
                 <>
                   <h4>Sell Transactions</h4>
                   <TransactionTable
-                    headers={["#", "Buyer", "Amount"]}
+                    headers={["#", "Buyer", "Amount", "Date", "Note"]}
                     data={acc.transactions.sellTransactions}
                   />
                 </>
@@ -57,7 +91,7 @@ const Accounts = () => {
                 <>
                   <h4>Receiver Transactions</h4>
                   <TransactionTable
-                    headers={["#", "Sender", "Amount"]}
+                    headers={["#", "Sender", "Amount", "Date", "Note"]}
                     data={acc.transactions.receiverTransactions}
                   />
                 </>
@@ -67,8 +101,28 @@ const Accounts = () => {
                 <>
                   <h4>Buy Transactions</h4>
                   <TransactionTable
-                    headers={["#", "Seller", "Amount"]}
+                    headers={["#", "Seller", "Amount", "Date", "Note"]}
                     data={acc.transactions.buyTransactions}
+                  />
+                </>
+              )}
+
+              {acc.debitors?.length > 0 && (
+                <>
+                  <h4>Debitors</h4>
+                  <TransactionTable
+                    headers={["#", "Name", "Amount", "Date", "Note"]}
+                    data={acc.debitors}
+                  />
+                </>
+              )}
+
+              {acc.creditors?.length > 0 && (
+                <>
+                  <h4>Creditors</h4>
+                  <TransactionTable
+                    headers={["#", "Name", "Amount", "Date", "Note"]}
+                    data={acc.creditors}
                   />
                 </>
               )}
@@ -78,6 +132,74 @@ const Accounts = () => {
           <p className="text-muted text-center ">No accounts found.</p>
         )}
       </div>
+
+      {/* ✅ Bootstrap Modal */}
+      {showModal && (
+        <div className="modal show fade d-block" tabIndex="-1">
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Add New Account</h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setShowModal(false)}
+                ></button>
+              </div>
+
+              <div className="modal-body">
+                <div className="mb-3">
+                  <label className="form-label">Account Name</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    name="name"
+                    value={newAccount.name}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Balance</label>
+                  <input
+                    type="number"
+                    className="form-control"
+                    name="balance"
+                    value={newAccount.balance}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Products</label>
+                  <input
+                    type="number"
+                    className="form-control"
+                    name="product"
+                    value={newAccount.product}
+                    onChange={handleInputChange}
+                  />
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowModal(false)}
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-dark"
+                  onClick={handleSaveAccount}
+                >
+                  Save Account
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -99,6 +221,8 @@ const TransactionTable = ({ headers, data }) => {
             <td>{idx + 1}</td>
             <td>{txn.name}</td>
             <td>{txn.amount}</td>
+            <td>{new Date(txn.date).toLocaleDateString()}</td>
+            <td>{txn.note || "-"}</td>
           </tr>
         ))}
       </tbody>

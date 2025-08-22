@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-const SendForm = () => {
+const SendForm = ({ onSubmit }) => {
   const [form, setForm] = useState({
     senderName: "",
     receiverName: "",
@@ -35,6 +35,7 @@ const SendForm = () => {
         date: "",
         note: "",
       });
+      if (onSubmit) onSubmit();
     } catch (err) {
       console.error("Error creating send transaction:", err);
     }

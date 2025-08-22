@@ -5,17 +5,32 @@ const CreateOrderForm = ({ newOrder, handleChange, handleAddOrder }) => {
     <div className="card shadow-sm border-0 p-3 mb-4">
       <h4 className="mb-3">Create Order</h4>
       <form onSubmit={handleAddOrder} className="row g-2">
+        {/* Order By */}
         <div className="col-md-3">
           <input
             type="text"
-            name="name"
-            placeholder="Name"
+            name="orderFrom"
+            placeholder="Order From"
             className="form-control"
-            value={newOrder.name}
+            value={newOrder.orderFrom}
             onChange={handleChange}
           />
         </div>
+
+        {/* Order To */}
         <div className="col-md-3">
+          <input
+            type="text"
+            name="orderTo"
+            placeholder="Order To"
+            className="form-control"
+            value={newOrder.orderTo}
+            onChange={handleChange}
+          />
+        </div>
+
+        {/* Rate */}
+        <div className="col-md-2">
           <input
             type="number"
             name="rate"
@@ -25,7 +40,9 @@ const CreateOrderForm = ({ newOrder, handleChange, handleAddOrder }) => {
             onChange={handleChange}
           />
         </div>
-        <div className="col-md-3">
+
+        {/* Quantity */}
+        <div className="col-md-2">
           <input
             type="number"
             name="quantity"
@@ -36,6 +53,7 @@ const CreateOrderForm = ({ newOrder, handleChange, handleAddOrder }) => {
           />
         </div>
 
+        {/* Add Button */}
         <div className="col-md-2">
           <button type="submit" className="btn btn-dark w-100">
             Add

@@ -1,10 +1,12 @@
 const Order = require("../models/Order");
+const Account = require("../models/Account");
 // Create Order
 const createOrder = async (data) => {
+  console.log(data);
   try {
-    const { name, rate, quantity, status } = data;
+    const { orderFrom, orderTo, rate, quantity, status } = data;
 
-    if (!name || rate == null || quantity == null) {
+    if (!orderFrom || !orderTo || rate == null || quantity == null) {
       console.error("All fields are mandatory!");
       return null;
     }
@@ -12,9 +14,10 @@ const createOrder = async (data) => {
     const total = rate * quantity;
 
     const newOrder = await Order.create({
-      name,
-      rate,
+      orderFrom,
+      orderTo,
       quantity,
+      rate,
       total,
       status: status || "pending",
     });
@@ -89,8 +92,17 @@ const completeOrder = async ({ id, quantity, rate, receiver, pay }) => {
     const completionRate = Number(rate);
     const completionAmount = completionQuantity * completionRate;
 
-    // Force "true"/"false" strings into real booleans
-    const updated = await Order.findByIdAndUpdate(
+    const order = await Order.findById(id);
+    if (!order) {
+      console.error("Order not found");
+      return null;
+    }
+
+    const orderBy = order.orderBy;
+    const orderTo = order.orderTo;
+
+    // Update order status
+    const updatedOrder = await Order.findByIdAndUpdate(
       id,
       {
         completionQuantity,
@@ -103,12 +115,108 @@ const completeOrder = async ({ id, quantity, rate, receiver, pay }) => {
       { new: true }
     ).lean();
 
-    if (!updated) {
-      console.error("Order not found");
-      return null;
+    // Ensure accounts exist
+    let orderByAcc = await Account.findOne({ name: orderBy });
+    if (!orderByAcc) {
+      orderByAcc = await Account.create({
+        name: orderBy,
+        balance: 0,
+        product: 0,
+        transactions: {
+          sendTransactions: [],
+          sellTransactions: [],
+          receiverTransactions: [],
+          buyTransactions: [],
+        },
+        debitors: [],
+        creditors: [],
+      });
     }
 
-    return updated;
+    let orderToAcc = await Account.findOne({ name: orderTo });
+    if (!orderToAcc) {
+      orderToAcc = await Account.create({
+        name: orderTo,
+        balance: 0,
+        product: 0,
+        transactions: {
+          sendTransactions: [],
+          sellTransactions: [],
+          receiverTransactions: [],
+          buyTransactions: [],
+        },
+        debitors: [],
+        creditors: [],
+      });
+    }
+
+    let receiverAcc = await Account.findOne({ name: receiver });
+    if (!receiverAcc) {
+      receiverAcc = await Account.create({
+        name: receiver,
+        balance: 0,
+        product: 0,
+        transactions: {
+          sendTransactions: [],
+          sellTransactions: [],
+          receiverTransactions: [],
+          buyTransactions: [],
+        },
+        debitors: [],
+        creditors: [],
+      });
+    }
+
+    // Products are with receiver
+    receiverAcc.product += completionQuantity;
+
+    // Handle orderBy
+    if (pay) {
+      orderByAcc.balance += completionAmount; // Paid → add balance
+    } else {
+      // Not paid → receiver becomes creditor
+      receiverAcc.creditors.push({
+        name: orderBy,
+        amount: completionAmount,
+        trxId: updatedOrder._id,
+        note: "Unpaid order received",
+      });
+      orderByAcc.debitors.push({
+        name: receiver,
+        amount: completionAmount,
+        trxId: updatedOrder._id,
+        note: "Receiver is creditor for unpaid order",
+      });
+    }
+
+    // Transactions
+    orderByAcc.sellTransactions.push({
+      name: receiver,
+      amount: completionAmount,
+      trxId: updatedOrder._id,
+      note: pay ? "Order paid" : "Order unpaid",
+    });
+
+    orderToAcc.buyTransactions.push({
+      name: receiver,
+      amount: completionAmount,
+      trxId: updatedOrder._id,
+      note: "Order received",
+    });
+
+    receiverAcc.receiverTransactions.push({
+      name: orderBy,
+      amount: completionAmount,
+      trxId: updatedOrder._id,
+      note: "Products received",
+    });
+
+    // Save all
+    await orderByAcc.save();
+    await orderToAcc.save();
+    await receiverAcc.save();
+
+    return updatedOrder;
   } catch (err) {
     console.error("Error completing order:", err);
     return null;

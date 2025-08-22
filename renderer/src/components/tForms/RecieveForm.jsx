@@ -41,9 +41,9 @@ const RecieveForm = () => {
   };
 
   return (
-    <div className="recieve-form row gap-2">
+    <div className="recieve-form">
       <h3>Receiver Form</h3>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="gap-2 row">
         <div className="col-12 d-flex gap-2">
           <input
             type="text"
