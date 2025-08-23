@@ -1,6 +1,5 @@
 const Sell = require("../models/SellTrx");
 const Account = require("../models/Account");
-const Person = require("../models/Person");
 
 // Helper: get or create account
 async function getOrCreateAccount(name) {

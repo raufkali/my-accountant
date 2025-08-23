@@ -31,9 +31,9 @@ const Accounts = () => {
     try {
       const accountToSave = {
         ...newAccount,
-        name: newAccount.name.toLowerCase(), // ✅ convert to lowercase
+        name: newAccount.name.toLowerCase(), // lowercase names
       };
-      const created = await window.api.accounts.create(accountToSave); // ✅ preload API
+      const created = await window.api.accounts.create(accountToSave);
       setAccounts([...accounts, created]);
       setShowModal(false);
       setNewAccount({ name: "", balance: 0, product: 0 });
@@ -44,7 +44,7 @@ const Accounts = () => {
 
   return (
     <div className="main-content pe-4 pt-4 bg-light">
-      {/* ✅ Top-right Add Button */}
+      {/* ✅ Add Button */}
       <div className="d-flex justify-content-end mb-3 me-4">
         <button className="btn btn-dark" onClick={() => setShowModal(true)}>
           + Add Account
@@ -59,10 +59,10 @@ const Accounts = () => {
               key={acc._id}
             >
               <h3 className="card-brand fw-bold">{acc.name} Account</h3>
-              <h5 className={acc.balance > 0 ? "text-success" : "text-danger"}>
+              <h5 className={acc.balance >= 0 ? "text-success" : "text-danger"}>
                 Total Balance: {acc.balance ?? 0}
               </h5>
-              <h5 className={acc.balance > 0 ? "text-success" : "text-danger"}>
+              <h5 className={acc.product >= 0 ? "text-success" : "text-danger"}>
                 Total Products: {acc.product ?? 0}
               </h5>
 
@@ -107,6 +107,7 @@ const Accounts = () => {
                 </>
               )}
 
+              {/* ✅ Debitors & Creditors */}
               {acc.debitors?.length > 0 && (
                 <>
                   <h4>Debitors</h4>
@@ -129,7 +130,7 @@ const Accounts = () => {
             </div>
           ))
         ) : (
-          <p className="text-muted text-center ">No accounts found.</p>
+          <p className="text-muted text-center">No accounts found.</p>
         )}
       </div>
 

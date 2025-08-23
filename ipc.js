@@ -3,7 +3,6 @@ const { ipcMain } = require("electron");
 // Controllers
 const ordersController = require("./controllers/ordersController");
 const accountController = require("./controllers/accountController");
-const personController = require("./controllers/personController");
 const sellController = require("./controllers/sellController");
 const buyController = require("./controllers/buyController");
 const sendController = require("./controllers/sendController");

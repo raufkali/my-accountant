@@ -18,7 +18,9 @@ const Orders = () => {
   const totComp = orders
     .filter((order) => order.status === "completed")
     .reduce((sum, order) => sum + (order.completionAmount || 0), 0);
-
+  const totalPendingQuantity = orders
+    .filter((order) => order.status === "pending")
+    .reduce((sum, order) => sum + order.quantity, 0);
   const countPending = orders.filter(
     (order) => order.status === "pending"
   ).length;
@@ -196,6 +198,7 @@ const Orders = () => {
       <OrdersSummary
         totPending={totPending}
         totComp={totComp}
+        totalPendingQuantity={totalPendingQuantity}
         countPending={countPending}
         countCompleted={countCompleted}
       />

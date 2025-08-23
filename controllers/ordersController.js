@@ -30,14 +30,103 @@ const createOrder = async (data) => {
 };
 
 // Delete Order
+// Delete Order
 const deleteOrder = async (id) => {
   try {
-    const deleted = await Order.findByIdAndDelete(id).lean();
-    if (!deleted) {
+    const deletedOrder = await Order.findByIdAndDelete(id).lean();
+
+    if (!deletedOrder) {
       console.error("Order not found");
       return null;
     }
-    return deleted;
+
+    // If order was completed, rollback accounts
+    if (deletedOrder.status === "completed") {
+      const {
+        completionQuantity,
+        completionAmount,
+        orderFrom,
+        orderTo,
+        receiver,
+        pay,
+      } = deletedOrder;
+
+      const orderFromName = orderFrom?.toLowerCase();
+      const orderToName = orderTo?.toLowerCase();
+      const receiverName = receiver?.toLowerCase();
+
+      // Helper to fetch account safely
+      const getAccount = async (name) => {
+        if (!name) return null;
+        return await Account.findOne({ name });
+      };
+
+      const orderFromAcc = await getAccount(orderFromName);
+      const orderToAcc = await getAccount(orderToName);
+      const receiverAcc = await getAccount(receiverName);
+
+      // Rollback product transfer
+      if (receiverAcc) {
+        receiverAcc.product -= completionQuantity;
+        await receiverAcc.save();
+      }
+      if (orderFromAcc) {
+        orderFromAcc.product += completionQuantity;
+        await orderFromAcc.save();
+      }
+
+      // Rollback balances
+      if (pay) {
+        if (orderFromAcc) {
+          orderFromAcc.balance -= completionAmount;
+          await orderFromAcc.save();
+        }
+        if (orderToAcc) {
+          orderToAcc.balance += completionAmount;
+          await orderToAcc.save();
+        }
+      } else {
+        // Remove creditors and debitors entries linked to this trx
+        if (orderToAcc) {
+          orderToAcc.transactions.creditors =
+            orderToAcc.transactions.creditors.filter(
+              (c) => String(c.trxId) !== String(deletedOrder._id)
+            );
+          await orderToAcc.save();
+        }
+        if (orderFromAcc) {
+          orderFromAcc.transactions.debitors =
+            orderFromAcc.transactions.debitors.filter(
+              (d) => String(d.trxId) !== String(deletedOrder._id)
+            );
+          await orderFromAcc.save();
+        }
+      }
+
+      // Remove transaction history from all accounts
+      const removeTransactions = (account, field) => {
+        if (!account) return;
+        account.transactions[field] = account.transactions[field].filter(
+          (trx) => String(trx.trxId) !== String(deletedOrder._id)
+        );
+      };
+
+      if (orderFromAcc) {
+        removeTransactions(orderFromAcc, "sellTransactions");
+        await orderFromAcc.save();
+      }
+      if (orderToAcc) {
+        removeTransactions(orderToAcc, "buyTransactions");
+        await orderToAcc.save();
+      }
+      if (receiverAcc) {
+        removeTransactions(receiverAcc, "receiverTransactions");
+        await receiverAcc.save();
+      }
+    }
+
+    console.log("Order deleted and rolled back:", deletedOrder._id);
+    return deletedOrder;
   } catch (error) {
     console.error("Error deleting order:", error);
     return null;
@@ -104,8 +193,8 @@ const completeOrder = async ({ id, quantity, rate, receiver, pay }) => {
       return null;
     }
 
-    const orderFrom = order.orderFrom;
-    const orderTo = order.orderTo;
+    const orderFrom = order.orderFrom.toLowerCase();
+    const orderTo = order.orderTo.toLowerCase();
     const receiverName = String(receiver).trim().toLowerCase();
 
     // Update order status
