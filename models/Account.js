@@ -2,7 +2,8 @@ const mongoose = require("mongoose");
 
 const transactionSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  amount: { type: Number, required: true },
+  amount: { type: Number },
+  product: { type: Number },
   trxId: { type: mongoose.Schema.Types.ObjectId, ref: "SellTrx" }, // optional link
   date: { type: Date, default: Date.now },
   note: { type: String },

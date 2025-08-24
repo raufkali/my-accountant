@@ -5,6 +5,7 @@ const SendForm = ({ onSubmit }) => {
     senderName: "",
     receiverName: "",
     amount: "",
+    product: "",
     date: "",
     note: "",
   });
@@ -22,6 +23,7 @@ const SendForm = ({ onSubmit }) => {
       const payload = {
         ...form,
         amount: Number(form.amount),
+        product: Number(form.product),
       };
 
       await window.api.sends.create(payload);
@@ -32,6 +34,7 @@ const SendForm = ({ onSubmit }) => {
         senderName: "",
         receiverName: "",
         amount: "",
+        product: "",
         date: "",
         note: "",
       });
@@ -42,9 +45,9 @@ const SendForm = ({ onSubmit }) => {
   };
 
   return (
-    <div className="send-form row gap-2">
+    <div className="send-form  gap-2">
       <h3>Sender Form</h3>
-      <form onSubmit={handleSubmit} className="w-100">
+      <form onSubmit={handleSubmit} className=" row">
         <div className="col-12 d-flex gap-2">
           <input
             type="text"
@@ -71,6 +74,15 @@ const SendForm = ({ onSubmit }) => {
             onChange={handleChange}
             className="form-control"
             placeholder="Enter Total Amount"
+            required
+          />
+          <input
+            type="number"
+            name="product"
+            value={form.product}
+            onChange={handleChange}
+            className="form-control"
+            placeholder="Enter Dirhams"
             required
           />
           <input

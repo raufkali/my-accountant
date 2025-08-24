@@ -54,6 +54,7 @@ const deleteOrder = async (id) => {
       const orderFromName = orderFrom?.toLowerCase();
       const orderToName = orderTo?.toLowerCase();
       const receiverName = receiver?.toLowerCase();
+      const isPaid = String(pay).toLowerCase() === "yes";
 
       // Helper to fetch account safely
       const getAccount = async (name) => {
@@ -65,45 +66,33 @@ const deleteOrder = async (id) => {
       const orderToAcc = await getAccount(orderToName);
       const receiverAcc = await getAccount(receiverName);
 
-      // Rollback product transfer
+      // --------- Rollback product transfer ------------
       if (receiverAcc) {
         receiverAcc.product -= completionQuantity;
-        await receiverAcc.save();
       }
       if (orderFromAcc) {
         orderFromAcc.product += completionQuantity;
-        await orderFromAcc.save();
       }
 
-      // Rollback balances
-      if (pay) {
-        if (orderFromAcc) {
-          orderFromAcc.balance -= completionAmount;
-          await orderFromAcc.save();
-        }
-        if (orderToAcc) {
-          orderToAcc.balance += completionAmount;
-          await orderToAcc.save();
-        }
+      // --------- Rollback balances ------------
+      if (isPaid) {
+        if (orderFromAcc) orderFromAcc.balance -= completionAmount;
+        if (orderToAcc) orderToAcc.balance += completionAmount;
       } else {
-        // Remove creditors and debitors entries linked to this trx
-        if (orderToAcc) {
-          orderToAcc.transactions.creditors =
-            orderToAcc.transactions.creditors.filter(
-              (c) => String(c.trxId) !== String(deletedOrder._id)
-            );
-          await orderToAcc.save();
-        }
+        // Remove creditors/debitors created in completeOrder
         if (orderFromAcc) {
-          orderFromAcc.transactions.debitors =
-            orderFromAcc.transactions.debitors.filter(
-              (d) => String(d.trxId) !== String(deletedOrder._id)
-            );
-          await orderFromAcc.save();
+          orderFromAcc.creditors = orderFromAcc.creditors.filter(
+            (c) => String(c.trxId) !== String(deletedOrder._id)
+          );
+        }
+        if (orderToAcc) {
+          orderToAcc.debitors = orderToAcc.debitors.filter(
+            (d) => String(d.trxId) !== String(deletedOrder._id)
+          );
         }
       }
 
-      // Remove transaction history from all accounts
+      // --------- Rollback normal transactions ------------
       const removeTransactions = (account, field) => {
         if (!account) return;
         account.transactions[field] = account.transactions[field].filter(
@@ -113,23 +102,44 @@ const deleteOrder = async (id) => {
 
       if (orderFromAcc) {
         removeTransactions(orderFromAcc, "sellTransactions");
-        await orderFromAcc.save();
       }
       if (orderToAcc) {
         removeTransactions(orderToAcc, "buyTransactions");
-        await orderToAcc.save();
       }
       if (receiverAcc) {
         removeTransactions(receiverAcc, "receiverTransactions");
-        await receiverAcc.save();
       }
+
+      // --------- Rollback extra linkage ------------
+      if (orderToAcc) {
+        orderToAcc.creditors = orderToAcc.creditors.filter(
+          (c) =>
+            String(c.trxId) !== String(deletedOrder._id) &&
+            c.name !== receiverName &&
+            c.product !== completionQuantity
+        );
+      }
+
+      if (receiverAcc) {
+        receiverAcc.debitors = receiverAcc.debitors.filter(
+          (d) =>
+            String(d.trxId) !== String(deletedOrder._id) &&
+            d.name !== orderToName &&
+            d.product !== completionQuantity
+        );
+      }
+
+      // --------- Save all accounts ------------
+      if (orderFromAcc) await orderFromAcc.save();
+      if (orderToAcc) await orderToAcc.save();
+      if (receiverAcc) await receiverAcc.save();
     }
 
     console.log("Order deleted and rolled back:", deletedOrder._id);
     return deletedOrder;
   } catch (error) {
     console.error("Error deleting order:", error);
-    return null;
+    throw error;
   }
 };
 
@@ -182,17 +192,26 @@ const completeOrder = async ({ id, quantity, rate, receiver, pay }) => {
     const completionRate = Number(rate);
     const completionAmount = completionQuantity * completionRate;
 
-    if (!id || !completionQuantity || !completionRate || !receiver) {
-      console.error("Missing required fields for completing order");
-      return null;
+    // Normalize pay flag
+    const isPaid = String(pay).toLowerCase() === "yes";
+
+    // Ensure essential inputs (don’t reject 0)
+    if (
+      !id ||
+      completionQuantity == null ||
+      completionRate == null ||
+      !receiver
+    ) {
+      throw new Error("Missing required fields for completing order");
     }
 
+    // Find the order
     const order = await Order.findById(id);
     if (!order) {
-      console.error("Order not found");
-      return null;
+      throw new Error("Order not found");
     }
 
+    // Order participants
     const orderFrom = order.orderFrom.toLowerCase();
     const orderTo = order.orderTo.toLowerCase();
     const receiverName = String(receiver).trim().toLowerCase();
@@ -206,106 +225,115 @@ const completeOrder = async ({ id, quantity, rate, receiver, pay }) => {
         completionAmount,
         receiver: receiverName,
         status: "completed",
-        pay,
+        pay: isPaid ? "yes" : "no",
       },
       { new: true, runValidators: true }
     ).lean();
 
-    // Helper to initialize account if missing
+    // Helper to ensure account existence using upsert
     const ensureAccount = async (name) => {
       if (!name) return null;
-      let acc = await Account.findOne({ name });
-      if (!acc) {
-        acc = await Account.create({
-          name,
-          balance: 0,
-          product: 0,
-          transactions: {
-            sendTransactions: [],
-            sellTransactions: [],
-            receiverTransactions: [],
-            buyTransactions: [],
+      return await Account.findOneAndUpdate(
+        { name },
+        {
+          $setOnInsert: {
+            balance: 0,
+            product: 0,
+            transactions: {
+              sendTransactions: [],
+              sellTransactions: [],
+              receiverTransactions: [],
+              buyTransactions: [],
+            },
+            debitors: [],
+            creditors: [],
           },
-          debitors: [],
-          creditors: [],
-        });
-      }
-      return acc;
+        },
+        { new: true, upsert: true }
+      );
     };
 
+    // Get or create accounts
     const orderFromAcc = await ensureAccount(orderFrom);
     const orderToAcc = await ensureAccount(orderTo);
     const receiverAcc = await ensureAccount(receiverName);
 
     if (!receiverAcc) {
-      console.error("Receiver account could not be created");
-      return null;
+      throw new Error("Receiver account could not be created");
     }
 
-    // Products are with receiver
+    // Check stock before transferring products
+
+    // --------- Product Movement ------------
     receiverAcc.product += completionQuantity;
     orderFromAcc.product -= completionQuantity;
 
-    // Handle balances and debts
-    if (pay) {
-      if (orderFromAcc) {
-        orderFromAcc.balance += completionAmount;
-        orderToAcc.balance -= completionAmount;
-      }
-      // Paid → add balance
+    // --------- Money Handling ------------
+    if (isPaid) {
+      orderFromAcc.balance += completionAmount; // seller gets money
+      orderToAcc.balance -= completionAmount; // buyer pays money
     } else {
-      if (receiverAcc && orderFromAcc) {
-        orderToAcc.transactions.creditors.push({
-          name: orderTo,
-          amount: completionAmount,
-          trxId: updatedOrder._id,
-          note: "product deducted but payment not recieved",
-        });
-
-        orderFromAcc.transactions.debitors.push({
-          name: orderFrom,
-          amount: completionAmount,
-          trxId: updatedOrder._id,
-          note: "Order Giver is Debitor for unpaid order",
-        });
-      }
-    }
-
-    // Transactions
-    if (orderFromAcc) {
-      orderFromAcc.transactions.sellTransactions.push({
-        name: receiverName,
+      // Record debts
+      orderFromAcc.creditors.push({
+        name: orderTo,
         amount: completionAmount,
         trxId: updatedOrder._id,
-        note: pay ? "Order paid" : "Order unpaid",
+        note: "Product deducted but payment not received",
       });
-      await orderFromAcc.save();
-    }
 
-    if (orderToAcc) {
-      orderToAcc.transactions.buyTransactions.push({
-        name: receiverName,
-        amount: completionAmount,
-        trxId: updatedOrder._id,
-        note: "Order received",
-      });
-      await orderToAcc.save();
-    }
-
-    if (receiverAcc) {
-      receiverAcc.transactions.receiverTransactions.push({
+      orderToAcc.debitors.push({
         name: orderFrom,
         amount: completionAmount,
         trxId: updatedOrder._id,
-        note: "Products received",
+        note: "Order giver is debitor for unpaid order",
       });
-      await receiverAcc.save();
     }
+
+    // --------- Transactions Logging ------------
+
+    orderFromAcc.transactions.sellTransactions.push({
+      name: orderTo,
+      amount: completionAmount,
+      trxId: updatedOrder._id,
+      note: isPaid ? "Order paid" : "Order unpaid",
+    });
+
+    orderToAcc.transactions.buyTransactions.push({
+      name: orderFrom,
+      amount: completionAmount,
+      trxId: updatedOrder._id,
+      note: "Order received",
+    });
+
+    receiverAcc.transactions.receiverTransactions.push({
+      name: orderFrom,
+      amount: completionAmount,
+      trxId: updatedOrder._id,
+      note: "Products received",
+    });
+
+    // Receiver & buyer linkage (products)
+    orderToAcc.creditors.push({
+      name: receiverName,
+      product: completionQuantity,
+      note: "Receiver got products",
+    });
+
+    receiverAcc.debitors.push({
+      name: orderTo,
+      product: completionQuantity,
+      note: "Received products",
+    });
+
+    // --------- Save Accounts ------------
+    await orderFromAcc.save();
+    await orderToAcc.save();
+    await receiverAcc.save();
 
     return updatedOrder;
   } catch (err) {
-    console.error("Error completing order:", err);
-    return null;
+    console.error("Error completing order:", err.message);
+    throw err; // throw instead of silently returning null
   }
 };
 

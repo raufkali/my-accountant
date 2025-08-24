@@ -12,9 +12,15 @@ async function getOrCreateAccount(name) {
 }
 
 const createReceive = async (data) => {
-  const { receiverName, senderName, amount, note } = data;
+  const { receiverName, senderName, amount, product, note } = data;
 
-  const receiveTxn = new Receive({ receiverName, senderName, amount, note });
+  const receiveTxn = new Receive({
+    receiverName,
+    senderName,
+    amount,
+    product,
+    note,
+  });
   await receiveTxn.save();
 
   const receiverAcc = await getOrCreateAccount(receiverName);
@@ -23,6 +29,7 @@ const createReceive = async (data) => {
   receiverAcc.transactions.receiverTransactions.push({
     name: senderName,
     amount,
+    product,
     trxId: receiveTxn._id,
     note,
     date: new Date(),
@@ -31,13 +38,16 @@ const createReceive = async (data) => {
   senderAcc.transactions.sendTransactions.push({
     name: receiverName,
     amount,
+    product,
     trxId: receiveTxn._id,
     note,
     date: new Date(),
   });
 
   receiverAcc.balance += amount;
+  receiverAcc.product += product;
   senderAcc.balance -= amount;
+  senderAcc.product -= product;
 
   await receiverAcc.save();
   await senderAcc.save();

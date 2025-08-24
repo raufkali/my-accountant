@@ -5,6 +5,7 @@ const RecieveForm = () => {
     receiverName: "",
     senderName: "",
     amount: "",
+    product: "",
     date: "",
     note: "",
   });
@@ -22,6 +23,7 @@ const RecieveForm = () => {
       const payload = {
         ...form,
         amount: Number(form.amount),
+        product: Number(form.product),
       };
       await window.api.receives.create(payload);
       alert("Receive transaction created ✅");
@@ -31,6 +33,7 @@ const RecieveForm = () => {
         receiverName: "",
         senderName: "",
         amount: "",
+        product: "",
         date: "",
         note: "",
       });
@@ -70,7 +73,14 @@ const RecieveForm = () => {
             onChange={handleChange}
             className="form-control"
             placeholder="Enter Total Amount"
-            required
+          />
+          <input
+            type="number"
+            name="product"
+            value={form.product}
+            onChange={handleChange}
+            className="form-control"
+            placeholder="Enter Dirhams"
           />
           <input
             type="date"
