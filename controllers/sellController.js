@@ -59,6 +59,7 @@ const createSell = async (data) => {
   sellerAcc.transactions.sellTransactions.push({
     name: buyerName,
     amount: totalAmount,
+    product: totQuantity,
     trxId: sellTxn._id,
     note,
     date: new Date(),
@@ -68,6 +69,7 @@ const createSell = async (data) => {
   buyerAcc.transactions.buyTransactions.push({
     name: sellerName,
     amount: totalAmount,
+    product: totQuantity,
     trxId: sellTxn._id,
     note,
     date: new Date(),
@@ -174,8 +176,93 @@ const createSell = async (data) => {
 const getAllSells = async () => {
   return await Sell.find();
 };
+// Delete a Sell Transaction
+const deleteSell = async (sellId) => {
+  const sellTxn = await Sell.findById(sellId);
+  if (!sellTxn) {
+    throw new Error("Sell transaction not found");
+  }
+
+  const {
+    sellerName,
+    buyerName,
+    sellingRate,
+    totQuantity,
+    payingMethod,
+    debtors,
+  } = sellTxn;
+
+  const totalAmount = sellingRate * totQuantity;
+
+  // 1. Get accounts
+  const sellerAcc = await getOrCreateAccount(sellerName);
+  const buyerAcc = await getOrCreateAccount(buyerName);
+
+  // 2. Remove transaction references
+  sellerAcc.transactions.sellTransactions =
+    sellerAcc.transactions.sellTransactions.filter(
+      (t) => t.trxId.toString() !== sellId.toString()
+    );
+  buyerAcc.transactions.buyTransactions =
+    buyerAcc.transactions.buyTransactions.filter(
+      (t) => t.trxId.toString() !== sellId.toString()
+    );
+
+  // 3. Revert balances depending on payingMethod
+  if (payingMethod === "paid") {
+    sellerAcc.balance -= totalAmount;
+    buyerAcc.balance += totalAmount;
+  } else if (payingMethod === "payToDebtor" && debtors) {
+    for (let debtor of debtors) {
+      const debtorAcc = await getOrCreateAccount(debtor.name);
+
+      debtorAcc.balance -= debtor.amount;
+      buyerAcc.balance += debtor.amount;
+
+      // Remove references
+      sellerAcc.transactions.sendTransactions =
+        sellerAcc.transactions.sendTransactions.filter(
+          (t) => t.trxId.toString() !== sellId.toString()
+        );
+      debtorAcc.transactions.receiverTransactions =
+        debtorAcc.transactions.receiverTransactions.filter(
+          (t) => t.trxId.toString() !== sellId.toString()
+        );
+
+      // Revert creditors/debitors relation
+      sellerAcc.creditors = sellerAcc.creditors.filter(
+        (c) => c.trxId.toString() !== sellId.toString()
+      );
+      debtorAcc.creditors = debtorAcc.creditors.filter(
+        (c) => c.trxId.toString() !== sellId.toString()
+      );
+
+      await debtorAcc.save();
+    }
+  } else if (payingMethod === "unpaid") {
+    sellerAcc.creditors = sellerAcc.creditors.filter(
+      (c) => c.trxId.toString() !== sellId.toString()
+    );
+    buyerAcc.debitors = buyerAcc.debitors.filter(
+      (d) => d.trxId.toString() !== sellId.toString()
+    );
+  }
+
+  // 4. Revert product updates
+  sellerAcc.product += totQuantity;
+  buyerAcc.product -= totQuantity;
+
+  await sellerAcc.save();
+  await buyerAcc.save();
+
+  // 5. Finally delete sell transaction
+  await Sell.findByIdAndDelete(sellId);
+
+  return { message: "Sell transaction deleted successfully" };
+};
 
 module.exports = {
   createSell,
   getAllSells,
+  deleteSell,
 };

@@ -277,12 +277,14 @@ const completeOrder = async ({ id, quantity, rate, receiver, pay }) => {
       orderFromAcc.creditors.push({
         name: orderTo,
         amount: completionAmount,
+        product: completionQuantity,
         trxId: updatedOrder._id,
         note: "Product deducted but payment not received",
       });
 
       orderToAcc.debitors.push({
         name: orderFrom,
+        product: completionQuantity,
         amount: completionAmount,
         trxId: updatedOrder._id,
         note: "Order giver is debitor for unpaid order",
@@ -294,6 +296,7 @@ const completeOrder = async ({ id, quantity, rate, receiver, pay }) => {
     orderFromAcc.transactions.sellTransactions.push({
       name: orderTo,
       amount: completionAmount,
+      product: completionQuantity,
       trxId: updatedOrder._id,
       note: isPaid ? "Order paid" : "Order unpaid",
     });
@@ -301,6 +304,7 @@ const completeOrder = async ({ id, quantity, rate, receiver, pay }) => {
     orderToAcc.transactions.buyTransactions.push({
       name: orderFrom,
       amount: completionAmount,
+      product: completionQuantity,
       trxId: updatedOrder._id,
       note: "Order received",
     });
@@ -309,6 +313,8 @@ const completeOrder = async ({ id, quantity, rate, receiver, pay }) => {
       name: orderFrom,
       amount: completionAmount,
       trxId: updatedOrder._id,
+      product: completionQuantity,
+
       note: "Products received",
     });
 

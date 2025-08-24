@@ -1,20 +1,23 @@
 import React, { useState } from "react";
 
-const RecieveForm = () => {
+const ReceiveForm = ({ onSubmit }) => {
   const [form, setForm] = useState({
     receiverName: "",
     senderName: "",
     amount: "",
     product: "",
+    payDebt: false,
+    type: "",
     date: "",
     note: "",
   });
 
   const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value, type, checked } = e.target;
+    setForm((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -25,28 +28,47 @@ const RecieveForm = () => {
         amount: Number(form.amount),
         product: Number(form.product),
       };
-      await window.api.receives.create(payload);
-      alert("Receive transaction created ✅");
 
-      // Reset form
+      await window.api.receives.create(payload);
+      console.log("Receive transaction created ✅");
+
+      // reset
       setForm({
         receiverName: "",
         senderName: "",
         amount: "",
         product: "",
+        payDebt: false,
+        type: "",
         date: "",
         note: "",
       });
+      if (onSubmit) onSubmit();
     } catch (err) {
       console.error("Error creating receive transaction:", err);
-      alert("Failed to create transaction ❌");
     }
   };
 
   return (
-    <div className="recieve-form">
+    <div className="receive-form gap-2">
       <h3>Receiver Form</h3>
-      <form onSubmit={handleSubmit} className="gap-2 row">
+      <form onSubmit={handleSubmit} className="row gap-2">
+        {/* Type Selection FIRST */}
+        <div className="col-3 d-flex gap-2 mb-2">
+          <select
+            name="type"
+            value={form.type}
+            onChange={handleChange}
+            className="form-select bg-white shadow-sm"
+            required
+          >
+            <option value="">Select Type</option>
+            <option value="amount">Receive Amount</option>
+            <option value="product">Receive Products</option>
+            <option value="both">Receive Both</option>
+          </select>
+        </div>
+
         <div className="col-12 d-flex gap-2">
           <input
             type="text"
@@ -66,22 +88,57 @@ const RecieveForm = () => {
             placeholder="Enter Sender name"
             required
           />
-          <input
-            type="number"
-            name="amount"
-            value={form.amount}
-            onChange={handleChange}
-            className="form-control"
-            placeholder="Enter Total Amount"
-          />
-          <input
-            type="number"
-            name="product"
-            value={form.product}
-            onChange={handleChange}
-            className="form-control"
-            placeholder="Enter Dirhams"
-          />
+
+          {/* Conditionally Render Fields */}
+          {form.type === "amount" && (
+            <input
+              type="number"
+              name="amount"
+              value={form.amount}
+              onChange={handleChange}
+              className="form-control"
+              placeholder="Enter Received Amount"
+              required
+            />
+          )}
+
+          {form.type === "product" && (
+            <input
+              type="number"
+              name="product"
+              value={form.product}
+              onChange={handleChange}
+              className="form-control"
+              placeholder="Enter Received Products"
+              required
+            />
+          )}
+
+          {form.type === "both" && (
+            <>
+              <input
+                type="number"
+                name="amount"
+                value={form.amount}
+                onChange={handleChange}
+                className="form-control"
+                placeholder="Enter Received Amount"
+                required
+              />
+              <input
+                type="number"
+                name="product"
+                value={form.product}
+                onChange={handleChange}
+                className="form-control"
+                placeholder="Enter Received Products"
+                required
+              />
+            </>
+          )}
+        </div>
+
+        <div className="col-12 gap-2 d-flex">
           <input
             type="date"
             name="date"
@@ -90,6 +147,21 @@ const RecieveForm = () => {
             className="form-control"
             required
           />
+
+          {/* Pay Debt Checkbox */}
+          <div className="form-check align-items-center justify-content-center d-flex form-control text-center">
+            <input
+              type="checkbox"
+              name="payDebt"
+              checked={form.payDebt}
+              onChange={handleChange}
+              className="mx-2 form-check-input border-dark border-2"
+              id="payDebt"
+            />
+            <label className="form-check-label ms-1" htmlFor="payDebt">
+              Pay Debt
+            </label>
+          </div>
         </div>
 
         <div className="col-12 gap-2 d-flex">
@@ -110,4 +182,4 @@ const RecieveForm = () => {
   );
 };
 
-export default RecieveForm;
+export default ReceiveForm;

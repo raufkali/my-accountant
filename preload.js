@@ -32,23 +32,27 @@ contextBridge.exposeInMainWorld("api", {
   sells: {
     getAll: () => ipcRenderer.invoke("sells:getAll"),
     create: (sellData) => ipcRenderer.invoke("sells:create", sellData),
+    delete: (id) => ipcRenderer.invoke("sells:delete", id),
   },
 
   // Buys
   buys: {
     getAll: () => ipcRenderer.invoke("buys:getAll"),
     create: (buyData) => ipcRenderer.invoke("buys:create", buyData),
+    delete: (id) => ipcRenderer.invoke("buys:delete", id),
   },
 
   // Sends
   sends: {
     getAll: () => ipcRenderer.invoke("sends:getAll"),
     create: (sendData) => ipcRenderer.invoke("sends:create", sendData),
+    delete: (id) => ipcRenderer.invoke("sends:delete", id),
   },
 
   // Receives
   receives: {
     getAll: () => ipcRenderer.invoke("receives:getAll"),
     create: (receiveData) => ipcRenderer.invoke("receives:create", receiveData),
+    delete: (id) => ipcRenderer.invoke("receives:delete", id),
   },
 });

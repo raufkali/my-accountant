@@ -4,6 +4,7 @@ import "./Accounts.css";
 const Accounts = () => {
   const [accounts, setAccounts] = useState([]);
   const [showModal, setShowModal] = useState(false);
+  const [expandedSections, setExpandedSections] = useState({});
   const [newAccount, setNewAccount] = useState({
     name: "",
     balance: 0,
@@ -31,7 +32,7 @@ const Accounts = () => {
     try {
       const accountToSave = {
         ...newAccount,
-        name: newAccount.name.toLowerCase(), // lowercase names
+        name: newAccount.name.toLowerCase(),
       };
       const created = await window.api.accounts.create(accountToSave);
       setAccounts([...accounts, created]);
@@ -40,6 +41,14 @@ const Accounts = () => {
     } catch (err) {
       console.error("Error creating account:", err);
     }
+  };
+
+  const toggleSection = (accountId, section) => {
+    const key = `${accountId}-${section}`;
+    setExpandedSections((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
   };
 
   return (
@@ -66,66 +75,138 @@ const Accounts = () => {
                 Total Products: {acc.product ?? 0}
               </h5>
 
-              {/* ✅ Transactions Sections */}
+              {/* ✅ Transactions Sections with Toggler */}
               {acc.transactions?.sendTransactions?.length > 0 && (
-                <>
-                  <h4>Send Transactions</h4>
+                <SectionWithToggle
+                  title="Send Transactions"
+                  accountId={acc._id}
+                  section="sendTransactions"
+                  expandedSections={expandedSections}
+                  toggleSection={toggleSection}
+                >
                   <TransactionTable
-                    headers={["#", "Receiver", "Amount", "Date", "Note"]}
+                    headers={[
+                      "#",
+                      "Receiver",
+                      "Amount",
+                      "Products",
+                      "Date",
+                      "Note",
+                    ]}
                     data={acc.transactions.sendTransactions}
                   />
-                </>
+                </SectionWithToggle>
               )}
 
               {acc.transactions?.sellTransactions?.length > 0 && (
-                <>
-                  <h4>Sell Transactions</h4>
+                <SectionWithToggle
+                  title="Sell Transactions"
+                  accountId={acc._id}
+                  section="sellTransactions"
+                  expandedSections={expandedSections}
+                  toggleSection={toggleSection}
+                >
                   <TransactionTable
-                    headers={["#", "Buyer", "Amount", "Date", "Note"]}
+                    headers={[
+                      "#",
+                      "Buyer",
+                      "Amount",
+                      "Products",
+                      "Date",
+                      "Note",
+                    ]}
                     data={acc.transactions.sellTransactions}
                   />
-                </>
+                </SectionWithToggle>
               )}
 
               {acc.transactions?.receiverTransactions?.length > 0 && (
-                <>
-                  <h4>Receiver Transactions</h4>
+                <SectionWithToggle
+                  title="Receiver Transactions"
+                  accountId={acc._id}
+                  section="receiverTransactions"
+                  expandedSections={expandedSections}
+                  toggleSection={toggleSection}
+                >
                   <TransactionTable
-                    headers={["#", "Sender", "Amount", "Date", "Note"]}
+                    headers={[
+                      "#",
+                      "Sender",
+                      "Amount",
+                      "Products",
+                      "Date",
+                      "Note",
+                    ]}
                     data={acc.transactions.receiverTransactions}
                   />
-                </>
+                </SectionWithToggle>
               )}
 
               {acc.transactions?.buyTransactions?.length > 0 && (
-                <>
-                  <h4>Buy Transactions</h4>
+                <SectionWithToggle
+                  title="Buy Transactions"
+                  accountId={acc._id}
+                  section="buyTransactions"
+                  expandedSections={expandedSections}
+                  toggleSection={toggleSection}
+                >
                   <TransactionTable
-                    headers={["#", "Seller", "Amount", "Date", "Note"]}
+                    headers={[
+                      "#",
+                      "Seller",
+                      "Amount",
+                      "Products",
+                      "Date",
+                      "Note",
+                    ]}
                     data={acc.transactions.buyTransactions}
                   />
-                </>
+                </SectionWithToggle>
               )}
 
               {/* ✅ Debitors & Creditors */}
               {acc.debitors?.length > 0 && (
-                <>
-                  <h4>Debitors</h4>
+                <SectionWithToggle
+                  title="Debitors"
+                  accountId={acc._id}
+                  section="debitors"
+                  expandedSections={expandedSections}
+                  toggleSection={toggleSection}
+                >
                   <TransactionTable
-                    headers={["#", "Name", "Amount", "Date", "Note"]}
+                    headers={[
+                      "#",
+                      "Name",
+                      "Amount",
+                      "Products",
+                      "Date",
+                      "Note",
+                    ]}
                     data={acc.debitors}
                   />
-                </>
+                </SectionWithToggle>
               )}
 
               {acc.creditors?.length > 0 && (
-                <>
-                  <h4>Creditors</h4>
+                <SectionWithToggle
+                  title="Creditors"
+                  accountId={acc._id}
+                  section="creditors"
+                  expandedSections={expandedSections}
+                  toggleSection={toggleSection}
+                >
                   <TransactionTable
-                    headers={["#", "Name", "Amount", "Date", "Note"]}
+                    headers={[
+                      "#",
+                      "Name",
+                      "Amount",
+                      "Products",
+                      "Date",
+                      "Note",
+                    ]}
                     data={acc.creditors}
                   />
-                </>
+                </SectionWithToggle>
               )}
             </div>
           ))
@@ -205,6 +286,33 @@ const Accounts = () => {
   );
 };
 
+// ✅ Reusable Section with Toggle
+const SectionWithToggle = ({
+  title,
+  accountId,
+  section,
+  expandedSections,
+  toggleSection,
+  children,
+}) => {
+  const key = `${accountId}-${section}`;
+  const isExpanded = expandedSections[key];
+
+  return (
+    <div className="mt-3">
+      <div
+        className="d-flex justify-content-between align-items-center bg-light p-2 border rounded"
+        style={{ cursor: "pointer" }}
+        onClick={() => toggleSection(accountId, section)}
+      >
+        <h4 className="m-0">{title}</h4>
+        <span>{isExpanded ? "−" : "+"}</span>
+      </div>
+      {isExpanded && <div className="mt-2">{children}</div>}
+    </div>
+  );
+};
+
 // ✅ Reusable Table Component
 const TransactionTable = ({ headers, data }) => {
   return (
@@ -221,7 +329,8 @@ const TransactionTable = ({ headers, data }) => {
           <tr key={txn._id || idx}>
             <td>{idx + 1}</td>
             <td>{txn.name}</td>
-            <td>{txn.amount}</td>
+            <td>{txn.amount ?? 0}</td>
+            <td>{txn.product ?? 0}</td>
             <td>{new Date(txn.date).toLocaleDateString()}</td>
             <td>{txn.note || "-"}</td>
           </tr>

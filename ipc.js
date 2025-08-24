@@ -74,6 +74,9 @@ ipcMain.handle("sells:create", async (_, sellData) =>
   serialize(await sellController.createSell(sellData))
 );
 
+ipcMain.handle("sells:delete", async (_, sellId) =>
+  serialize(await sellController.deleteSell(sellId))
+);
 // ─── Buys ───────────────────────────────
 ipcMain.handle("buys:getAll", async () =>
   serialize(await buyController.getAllBuys())
@@ -81,6 +84,9 @@ ipcMain.handle("buys:getAll", async () =>
 
 ipcMain.handle("buys:create", async (_, buyData) =>
   serialize(await buyController.createBuy(buyData))
+);
+ipcMain.handle("buys:delete", async (_, buyId) =>
+  serialize(await buyController.deleteBuy(buyId))
 );
 
 // ─── Sends ───────────────────────────────
@@ -92,6 +98,9 @@ ipcMain.handle("sends:create", async (_, sendData) =>
   serialize(await sendController.createSend(sendData))
 );
 
+ipcMain.handle("sends:delete", async (_, sendId) =>
+  serialize(await sendController.deleteSend(sendId))
+);
 // ─── Receives ───────────────────────────────
 ipcMain.handle("receives:getAll", async () =>
   serialize(await receiveController.getAllReceives())
@@ -99,4 +108,8 @@ ipcMain.handle("receives:getAll", async () =>
 
 ipcMain.handle("receives:create", async (_, receiveData) =>
   serialize(await receiveController.createReceive(receiveData))
+);
+
+ipcMain.handle("receives:delete", async (_, receiveId) =>
+  serialize(await receiveController.deleteReceive(receiveId))
 );

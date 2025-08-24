@@ -6,14 +6,17 @@ const SendForm = ({ onSubmit }) => {
     receiverName: "",
     amount: "",
     product: "",
+    payDebt: false,
+    type: "",
     date: "",
     note: "",
   });
 
   const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
     setForm((prev) => ({
       ...prev,
-      [e.target.name]: e.target.value,
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
@@ -27,7 +30,7 @@ const SendForm = ({ onSubmit }) => {
       };
 
       await window.api.sends.create(payload);
-      ("Send transaction created ✅");
+      console.log("Send transaction created ✅");
 
       // reset
       setForm({
@@ -35,6 +38,8 @@ const SendForm = ({ onSubmit }) => {
         receiverName: "",
         amount: "",
         product: "",
+        payDebt: false,
+        type: "",
         date: "",
         note: "",
       });
@@ -45,9 +50,25 @@ const SendForm = ({ onSubmit }) => {
   };
 
   return (
-    <div className="send-form  gap-2">
+    <div className="send-form gap-2">
       <h3>Sender Form</h3>
-      <form onSubmit={handleSubmit} className=" row">
+      <form onSubmit={handleSubmit} className="row gap-2">
+        {/* Type Selection FIRST */}
+        <div className="col-3  d-flex gap-2 mb-2">
+          <select
+            name="type"
+            value={form.type}
+            onChange={handleChange}
+            className="form-select bg-white shadow-sm"
+            required
+          >
+            <option value="">Select Type</option>
+            <option value="amount">Send Amount</option>
+            <option value="product">Send Products</option>
+            <option value="both">Send Both</option>
+          </select>
+        </div>
+
         <div className="col-12 d-flex gap-2">
           <input
             type="text"
@@ -67,24 +88,57 @@ const SendForm = ({ onSubmit }) => {
             placeholder="Enter Receiver name"
             required
           />
-          <input
-            type="number"
-            name="amount"
-            value={form.amount}
-            onChange={handleChange}
-            className="form-control"
-            placeholder="Enter Total Amount"
-            required
-          />
-          <input
-            type="number"
-            name="product"
-            value={form.product}
-            onChange={handleChange}
-            className="form-control"
-            placeholder="Enter Dirhams"
-            required
-          />
+
+          {/* Conditionally Render Fields */}
+          {form.type === "amount" && (
+            <input
+              type="number"
+              name="amount"
+              value={form.amount}
+              onChange={handleChange}
+              className="form-control"
+              placeholder="Enter Total Amount"
+              required
+            />
+          )}
+
+          {form.type === "product" && (
+            <input
+              type="number"
+              name="product"
+              value={form.product}
+              onChange={handleChange}
+              className="form-control"
+              placeholder="Enter Dirhams"
+              required
+            />
+          )}
+
+          {form.type === "both" && (
+            <>
+              <input
+                type="number"
+                name="amount"
+                value={form.amount}
+                onChange={handleChange}
+                className="form-control"
+                placeholder="Enter Total Amount"
+                required
+              />
+              <input
+                type="number"
+                name="product"
+                value={form.product}
+                onChange={handleChange}
+                className="form-control"
+                placeholder="Enter Dirhams"
+                required
+              />
+            </>
+          )}
+        </div>
+
+        <div className="col-12 gap-2 d-flex">
           <input
             type="date"
             name="date"
@@ -93,9 +147,24 @@ const SendForm = ({ onSubmit }) => {
             className="form-control"
             required
           />
+
+          {/* Pay Debt Checkbox */}
+          <div className="form-check align-items-center justify-content-center d-flex form-control text-center">
+            <input
+              type="checkbox"
+              name="payDebt"
+              checked={form.payDebt}
+              onChange={handleChange}
+              className="mx-2 form-check-input border-dark border-2"
+              id="payDebt"
+            />
+            <label className="form-check-label ms-1" htmlFor="payDebt">
+              Pay Debt
+            </label>
+          </div>
         </div>
 
-        <div className="col-12 gap-2 d-flex mt-2">
+        <div className="col-12 gap-2 d-flex">
           <input
             type="text"
             name="note"

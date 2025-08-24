@@ -52,7 +52,7 @@ const OrderCard = ({ order, onDelete, onCancel, onProceed }) => {
                 <h6>Received Quantity: {order.completionQuantity} Dirham</h6>
                 <h6>Receiving Rate: {order.completionRate} PKR</h6>
                 <h6 className="fw-bold text-success">
-                  Paid Amount: {order.completionAmount} PKR
+                  Amount: {order.completionAmount} PKR
                 </h6>
                 {order.pay === "yes" ? (
                   <h6 className="bg-success p-1 text-white text-center rounded-5">
