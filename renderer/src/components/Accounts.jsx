@@ -60,20 +60,20 @@ const Accounts = () => {
         </button>
       </div>
 
-      <div className="row account-container bg-light gap-4 d-flex flex-column align-items-center">
+      <div className="row account-container bg-light gap-4 d-flex align-items-center justify-content-center">
         {accounts && accounts.length > 0 ? (
           accounts.map((acc) => (
             <div
               className="card account-card border-0 col-11 shadow-sm p-4"
               key={acc._id}
             >
-              <h3 className="card-brand fw-bold">{acc.name} Account</h3>
-              <h5 className={acc.balance >= 0 ? "text-success" : "text-danger"}>
+              <h5 className="card-brand fw-bold">{acc.name} Account</h5>
+              <h6 className={acc.balance >= 0 ? "text-success" : "text-danger"}>
                 Total Balance: {acc.balance ?? 0}
-              </h5>
-              <h5 className={acc.product >= 0 ? "text-success" : "text-danger"}>
+              </h6>
+              <h6 className={acc.product >= 0 ? "text-success" : "text-danger"}>
                 Total Products: {acc.product ?? 0}
-              </h5>
+              </h6>
 
               {/* ✅ Transactions Sections with Toggler */}
               {acc.transactions?.sendTransactions?.length > 0 && (
@@ -305,7 +305,7 @@ const SectionWithToggle = ({
         style={{ cursor: "pointer" }}
         onClick={() => toggleSection(accountId, section)}
       >
-        <h4 className="m-0">{title}</h4>
+        <h6 className="m-0">{title}</h6>
         <span>{isExpanded ? "−" : "+"}</span>
       </div>
       {isExpanded && <div className="mt-2">{children}</div>}

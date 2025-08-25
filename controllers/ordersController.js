@@ -40,11 +40,11 @@ const deleteOrder = async (id) => {
       return null;
     }
 
-    // If order was completed, rollback accounts
+    // Only rollback if order was completed
     if (deletedOrder.status === "completed") {
       const {
-        completionQuantity,
-        completionAmount,
+        completionQuantity = 0,
+        completionAmount = 0,
         orderFrom,
         orderTo,
         receiver,
@@ -67,12 +67,8 @@ const deleteOrder = async (id) => {
       const receiverAcc = await getAccount(receiverName);
 
       // --------- Rollback product transfer ------------
-      if (receiverAcc) {
-        receiverAcc.product -= completionQuantity;
-      }
-      if (orderFromAcc) {
-        orderFromAcc.product += completionQuantity;
-      }
+      if (receiverAcc) receiverAcc.product -= completionQuantity;
+      if (orderFromAcc) orderFromAcc.product += completionQuantity;
 
       // --------- Rollback balances ------------
       if (isPaid) {
@@ -100,23 +96,16 @@ const deleteOrder = async (id) => {
         );
       };
 
-      if (orderFromAcc) {
-        removeTransactions(orderFromAcc, "sellTransactions");
-      }
-      if (orderToAcc) {
-        removeTransactions(orderToAcc, "buyTransactions");
-      }
-      if (receiverAcc) {
-        removeTransactions(receiverAcc, "receiverTransactions");
-      }
+      if (orderFromAcc) removeTransactions(orderFromAcc, "sellTransactions");
+      if (orderToAcc) removeTransactions(orderToAcc, "buyTransactions");
+      if (receiverAcc) removeTransactions(receiverAcc, "receiverTransactions");
 
-      // --------- Rollback extra linkage ------------
+      // --------- Rollback extra product linkage ------------
       if (orderToAcc) {
         orderToAcc.creditors = orderToAcc.creditors.filter(
           (c) =>
             String(c.trxId) !== String(deletedOrder._id) &&
-            c.name !== receiverName &&
-            c.product !== completionQuantity
+            c.name !== receiverName
         );
       }
 
@@ -124,8 +113,7 @@ const deleteOrder = async (id) => {
         receiverAcc.debitors = receiverAcc.debitors.filter(
           (d) =>
             String(d.trxId) !== String(deletedOrder._id) &&
-            d.name !== orderToName &&
-            d.product !== completionQuantity
+            d.name !== orderToName
         );
       }
 
@@ -311,7 +299,7 @@ const completeOrder = async ({ id, quantity, rate, receiver, pay }) => {
 
     receiverAcc.transactions.receiverTransactions.push({
       name: orderFrom,
-      amount: completionAmount,
+      amount: 0,
       trxId: updatedOrder._id,
       product: completionQuantity,
 

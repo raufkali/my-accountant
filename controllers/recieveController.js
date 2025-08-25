@@ -73,16 +73,130 @@ const createReceive = async (data) => {
     senderAcc.product -= product;
   }
 
-  // If payDebt handling logic is needed, you can add it here:
-  // if (payDebt) {
-  //   // Implement debt-clearing between sender and receiver
-  // }
+  // Handle payDebt
+  if (payDebt) {
+    // Case 1: Sender owes Receiver
+    let debtEntry = senderAcc.debitors.find((d) => d.name === receiverName);
+    if (debtEntry) {
+      debtEntry.amount -= amount;
+      if (debtEntry.amount < 0) {
+        // Overpayment → Receiver now owes Sender
+        const overpay = Math.abs(debtEntry.amount);
+        senderAcc.debitors = senderAcc.debitors.filter(
+          (d) => d.name !== receiverName
+        );
+
+        // Add creditor entry for Sender
+        let senderCreditor = senderAcc.creditors.find(
+          (c) => c.name === receiverName
+        );
+        if (senderCreditor) senderCreditor.amount += overpay;
+        else
+          senderAcc.creditors.push({
+            name: receiverName,
+            amount: overpay,
+            trxId: receiveTxn._id,
+            note,
+            date: receiveTxn.date,
+          });
+
+        // Add debtor entry for Receiver
+        let receiverDebtor = receiverAcc.debitors.find(
+          (d) => d.name === senderName
+        );
+        if (receiverDebtor) receiverDebtor.amount += overpay;
+        else
+          receiverAcc.debitors.push({
+            name: senderName,
+            amount: overpay,
+            trxId: receiveTxn._id,
+            note,
+            date: receiveTxn.date,
+          });
+      } else if (debtEntry.amount === 0) {
+        senderAcc.debitors = senderAcc.debitors.filter(
+          (d) => d.name !== receiverName
+        );
+      }
+
+      // Mirror creditor on receiver side
+      let receiverCreditor = receiverAcc.creditors.find(
+        (c) => c.name === senderName
+      );
+      if (receiverCreditor) {
+        receiverCreditor.amount -= amount;
+        if (receiverCreditor.amount <= 0) {
+          receiverAcc.creditors = receiverAcc.creditors.filter(
+            (c) => c.name !== senderName
+          );
+        }
+      }
+    } else {
+      // Case 2: Receiver owes Sender
+      let debtEntry2 = receiverAcc.debitors.find((d) => d.name === senderName);
+      if (debtEntry2) {
+        debtEntry2.amount -= amount;
+        if (debtEntry2.amount < 0) {
+          const overpay = Math.abs(debtEntry2.amount);
+          receiverAcc.debitors = receiverAcc.debitors.filter(
+            (d) => d.name !== senderName
+          );
+
+          // Receiver becomes creditor
+          let receiverCreditor = receiverAcc.creditors.find(
+            (c) => c.name === senderName
+          );
+          if (receiverCreditor) receiverCreditor.amount += overpay;
+          else
+            receiverAcc.creditors.push({
+              name: senderName,
+              amount: overpay,
+              trxId: receiveTxn._id,
+              note,
+              date: receiveTxn.date,
+            });
+
+          // Sender becomes debtor
+          let senderDebtor = senderAcc.debitors.find(
+            (d) => d.name === receiverName
+          );
+          if (senderDebtor) senderDebtor.amount += overpay;
+          else
+            senderAcc.debitors.push({
+              name: receiverName,
+              amount: overpay,
+              trxId: receiveTxn._id,
+              note,
+              date: receiveTxn.date,
+            });
+        } else if (debtEntry2.amount === 0) {
+          receiverAcc.debitors = receiverAcc.debitors.filter(
+            (d) => d.name !== senderName
+          );
+        }
+
+        // Mirror creditor on sender side
+        let senderCreditor2 = senderAcc.creditors.find(
+          (c) => c.name === receiverName
+        );
+        if (senderCreditor2) {
+          senderCreditor2.amount -= amount;
+          if (senderCreditor2.amount <= 0) {
+            senderAcc.creditors = senderAcc.creditors.filter(
+              (c) => c.name !== receiverName
+            );
+          }
+        }
+      }
+    }
+  }
 
   await receiverAcc.save();
   await senderAcc.save();
 
   return receiveTxn;
 };
+
 // Delete a Receive Transaction
 const deleteReceive = async (receiveId) => {
   const receiveTxn = await Receive.findById(receiveId);
@@ -96,6 +210,7 @@ const deleteReceive = async (receiveId) => {
     amount = 0,
     product = 0,
     type,
+    payDebt,
   } = receiveTxn;
 
   // 1. Get accounts
@@ -126,11 +241,38 @@ const deleteReceive = async (receiveId) => {
     senderAcc.product += product;
   }
 
-  // 4. Save updated accounts
+  // 4. Rollback payDebt (simplified → restore debt)
+  if (payDebt) {
+    let debtEntry = senderAcc.debitors.find((d) => d.name === receiverName);
+    if (debtEntry) debtEntry.amount += amount;
+    else
+      senderAcc.debitors.push({
+        name: receiverName,
+        amount,
+        trxId: receiveTxn._id,
+        note: receiveTxn.note,
+        date: receiveTxn.date,
+      });
+
+    let creditorEntry = receiverAcc.creditors.find(
+      (c) => c.name === senderName
+    );
+    if (creditorEntry) creditorEntry.amount += amount;
+    else
+      receiverAcc.creditors.push({
+        name: senderName,
+        amount,
+        trxId: receiveTxn._id,
+        note: receiveTxn.note,
+        date: receiveTxn.date,
+      });
+  }
+
+  // 5. Save updated accounts
   await receiverAcc.save();
   await senderAcc.save();
 
-  // 5. Delete the transaction itself
+  // 6. Delete the transaction itself
   await Receive.findByIdAndDelete(receiveId);
 
   return { message: "Receive transaction deleted successfully" };
