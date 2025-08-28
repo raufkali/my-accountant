@@ -1,6 +1,8 @@
 const mongoose = require("mongoose");
 mongoose.models = {};
 const OrderSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // link transaction to user
+
   orderFrom: { type: String, required: true },
   orderTo: { type: String, required: true, default: "jawad" },
   rate: { type: Number, required: true },

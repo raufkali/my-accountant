@@ -10,7 +10,6 @@ contextBridge.exposeInMainWorld("api", {
       ipcRenderer.invoke("orders:update", id, updateData),
     complete: (data) => ipcRenderer.invoke("orders:complete", data),
   },
-
   // Accounts
   accounts: {
     getAll: () => ipcRenderer.invoke("accounts:getAll"),
@@ -55,4 +54,9 @@ contextBridge.exposeInMainWorld("api", {
     create: (receiveData) => ipcRenderer.invoke("receives:create", receiveData),
     delete: (id) => ipcRenderer.invoke("receives:delete", id),
   },
+  // Users
+  registerUser: (data) => ipcRenderer.invoke("user:register", data),
+  loginUser: (data) => ipcRenderer.invoke("user:login", data),
+  updateUser: (data) => ipcRenderer.invoke("user:update", data),
+  deleteUser: (id) => ipcRenderer.invoke("user:delete", id),
 });

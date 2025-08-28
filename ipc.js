@@ -1,4 +1,10 @@
 const { ipcMain } = require("electron");
+const {
+  registerUser,
+  loginUser,
+  updateUser,
+  deleteUser,
+} = require("./controllers/userController");
 
 // Controllers
 const ordersController = require("./controllers/ordersController");
@@ -113,3 +119,15 @@ ipcMain.handle("receives:create", async (_, receiveData) =>
 ipcMain.handle("receives:delete", async (_, receiveId) =>
   serialize(await receiveController.deleteReceive(receiveId))
 );
+
+// ✅ Register
+ipcMain.handle("user:register", registerUser);
+
+// ✅ Login
+ipcMain.handle("user:login", loginUser);
+
+// ✅ Update
+ipcMain.handle("user:update", updateUser);
+
+// ✅ Delete
+ipcMain.handle("user:delete", deleteUser);

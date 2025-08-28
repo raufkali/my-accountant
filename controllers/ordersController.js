@@ -1,16 +1,14 @@
 const Order = require("../models/Order");
 const Account = require("../models/Account");
-// Create Order
+
+// -------------------- Create Order --------------------
 const createOrder = async (data) => {
-  console.log(data);
   try {
     const { orderFrom, orderTo, rate, quantity, status } = data;
-
     if (!orderFrom || !orderTo || rate == null || quantity == null) {
       console.error("All fields are mandatory!");
       return null;
     }
-
     const total = rate * quantity;
 
     const newOrder = await Order.create({
@@ -22,25 +20,22 @@ const createOrder = async (data) => {
       status: status || "pending",
     });
 
-    return newOrder.toObject(); // plain JS object
+    return newOrder.toObject();
   } catch (error) {
     console.error("Error creating order:", error);
     return null;
   }
 };
 
-// Delete Order
-// Delete Order
+// -------------------- Delete Order (Rollback) --------------------
 const deleteOrder = async (id) => {
   try {
     const deletedOrder = await Order.findByIdAndDelete(id).lean();
-
     if (!deletedOrder) {
       console.error("Order not found");
       return null;
     }
 
-    // Only rollback if order was completed
     if (deletedOrder.status === "completed") {
       const {
         completionQuantity = 0,
@@ -56,39 +51,32 @@ const deleteOrder = async (id) => {
       const receiverName = receiver?.toLowerCase();
       const isPaid = String(pay).toLowerCase() === "yes";
 
-      // Helper to fetch account safely
-      const getAccount = async (name) => {
-        if (!name) return null;
-        return await Account.findOne({ name });
-      };
+      // Helper
+      const getAccount = async (name) =>
+        name ? await Account.findOne({ name }) : null;
 
       const orderFromAcc = await getAccount(orderFromName);
       const orderToAcc = await getAccount(orderToName);
       const receiverAcc = await getAccount(receiverName);
 
-      // --------- Rollback product transfer ------------
+      // --------- Rollback products ------------
       if (receiverAcc) receiverAcc.product -= completionQuantity;
       if (orderFromAcc) orderFromAcc.product += completionQuantity;
 
-      // --------- Rollback balances ------------
+      // --------- Rollback balances / debts ------------
       if (isPaid) {
-        if (orderFromAcc) orderFromAcc.balance -= completionAmount;
-        if (orderToAcc) orderToAcc.balance += completionAmount;
+        orderFromAcc.balance -= completionAmount;
+        orderToAcc.balance += completionAmount;
       } else {
-        // Remove creditors/debitors created in completeOrder
-        if (orderFromAcc) {
-          orderFromAcc.creditors = orderFromAcc.creditors.filter(
-            (c) => String(c.trxId) !== String(deletedOrder._id)
-          );
-        }
-        if (orderToAcc) {
-          orderToAcc.debitors = orderToAcc.debitors.filter(
-            (d) => String(d.trxId) !== String(deletedOrder._id)
-          );
-        }
+        orderFromAcc.creditors = orderFromAcc.creditors.filter(
+          (c) => String(c.trxId) !== String(deletedOrder._id)
+        );
+        orderToAcc.debitors = orderToAcc.debitors.filter(
+          (d) => String(d.trxId) !== String(deletedOrder._id)
+        );
       }
 
-      // --------- Rollback normal transactions ------------
+      // --------- Rollback transactions ------------
       const removeTransactions = (account, field) => {
         if (!account) return;
         account.transactions[field] = account.transactions[field].filter(
@@ -101,15 +89,12 @@ const deleteOrder = async (id) => {
       if (receiverAcc) removeTransactions(receiverAcc, "receiverTransactions");
 
       // --------- Rollback extra product linkage ------------
-      if (orderToAcc) {
+      if (receiverName !== orderToName) {
         orderToAcc.creditors = orderToAcc.creditors.filter(
           (c) =>
             String(c.trxId) !== String(deletedOrder._id) &&
             c.name !== receiverName
         );
-      }
-
-      if (receiverAcc) {
         receiverAcc.debitors = receiverAcc.debitors.filter(
           (d) =>
             String(d.trxId) !== String(deletedOrder._id) &&
@@ -117,7 +102,7 @@ const deleteOrder = async (id) => {
         );
       }
 
-      // --------- Save all accounts ------------
+      // Save
       if (orderFromAcc) await orderFromAcc.save();
       if (orderToAcc) await orderToAcc.save();
       if (receiverAcc) await receiverAcc.save();
@@ -131,7 +116,7 @@ const deleteOrder = async (id) => {
   }
 };
 
-// Get Order by ID
+// -------------------- Get Order by ID --------------------
 const getOrderById = async (id) => {
   try {
     const order = await Order.findById(id).lean();
@@ -146,17 +131,17 @@ const getOrderById = async (id) => {
   }
 };
 
-// Get All Orders
+// -------------------- Get All Orders --------------------
 const getAllOrders = async () => {
   try {
-    return await Order.find().lean(); // returns plain JS objects
+    return await Order.find().lean();
   } catch (error) {
     console.error("Error fetching orders:", error);
     return [];
   }
 };
 
-// Update Order
+// -------------------- Update Order --------------------
 const updateOrder = async (id, updateData) => {
   try {
     const updated = await Order.findByIdAndUpdate(id, updateData, {
@@ -173,17 +158,14 @@ const updateOrder = async (id, updateData) => {
   }
 };
 
+// -------------------- Complete Order --------------------
 const completeOrder = async ({ id, quantity, rate, receiver, pay }) => {
   try {
-    // Ensure numeric values
     const completionQuantity = Number(quantity);
     const completionRate = Number(rate);
     const completionAmount = completionQuantity * completionRate;
-
-    // Normalize pay flag
     const isPaid = String(pay).toLowerCase() === "yes";
 
-    // Ensure essential inputs (don’t reject 0)
     if (
       !id ||
       completionQuantity == null ||
@@ -193,18 +175,13 @@ const completeOrder = async ({ id, quantity, rate, receiver, pay }) => {
       throw new Error("Missing required fields for completing order");
     }
 
-    // Find the order
     const order = await Order.findById(id);
-    if (!order) {
-      throw new Error("Order not found");
-    }
+    if (!order) throw new Error("Order not found");
 
-    // Order participants
     const orderFrom = order.orderFrom.toLowerCase();
     const orderTo = order.orderTo.toLowerCase();
     const receiverName = String(receiver).trim().toLowerCase();
 
-    // Update order status
     const updatedOrder = await Order.findByIdAndUpdate(
       id,
       {
@@ -217,8 +194,9 @@ const completeOrder = async ({ id, quantity, rate, receiver, pay }) => {
       },
       { new: true, runValidators: true }
     ).lean();
-
-    // Helper to ensure account existence using upsert
+    if (receiverName === orderFrom) {
+      return new Error("This person can't be reciever");
+    }
     const ensureAccount = async (name) => {
       if (!name) return null;
       return await Account.findOneAndUpdate(
@@ -241,16 +219,11 @@ const completeOrder = async ({ id, quantity, rate, receiver, pay }) => {
       );
     };
 
-    // Get or create accounts
     const orderFromAcc = await ensureAccount(orderFrom);
     const orderToAcc = await ensureAccount(orderTo);
     const receiverAcc = await ensureAccount(receiverName);
 
-    if (!receiverAcc) {
-      throw new Error("Receiver account could not be created");
-    }
-
-    // Check stock before transferring products
+    if (!receiverAcc) throw new Error("Receiver account could not be created");
 
     // --------- Product Movement ------------
     receiverAcc.product += completionQuantity;
@@ -258,10 +231,9 @@ const completeOrder = async ({ id, quantity, rate, receiver, pay }) => {
 
     // --------- Money Handling ------------
     if (isPaid) {
-      orderFromAcc.balance += completionAmount; // seller gets money
-      orderToAcc.balance -= completionAmount; // buyer pays money
+      orderFromAcc.balance += completionAmount;
+      orderToAcc.balance -= completionAmount;
     } else {
-      // Record debts
       orderFromAcc.creditors.push({
         name: orderTo,
         amount: completionAmount,
@@ -269,7 +241,6 @@ const completeOrder = async ({ id, quantity, rate, receiver, pay }) => {
         trxId: updatedOrder._id,
         note: "Product deducted but payment not received",
       });
-
       orderToAcc.debitors.push({
         name: orderFrom,
         product: completionQuantity,
@@ -280,7 +251,6 @@ const completeOrder = async ({ id, quantity, rate, receiver, pay }) => {
     }
 
     // --------- Transactions Logging ------------
-
     orderFromAcc.transactions.sellTransactions.push({
       name: orderTo,
       amount: completionAmount,
@@ -288,7 +258,6 @@ const completeOrder = async ({ id, quantity, rate, receiver, pay }) => {
       trxId: updatedOrder._id,
       note: isPaid ? "Order paid" : "Order unpaid",
     });
-
     orderToAcc.transactions.buyTransactions.push({
       name: orderFrom,
       amount: completionAmount,
@@ -297,29 +266,30 @@ const completeOrder = async ({ id, quantity, rate, receiver, pay }) => {
       note: "Order received",
     });
 
-    receiverAcc.transactions.receiverTransactions.push({
-      name: orderFrom,
-      amount: 0,
-      trxId: updatedOrder._id,
-      product: completionQuantity,
+    if (receiverName !== orderTo) {
+      receiverAcc.transactions.receiverTransactions.push({
+        name: orderFrom,
+        amount: 0,
+        trxId: updatedOrder._id,
+        product: completionQuantity,
+        note: "Products received",
+      });
 
-      note: "Products received",
-    });
+      orderToAcc.creditors.push({
+        name: receiverName,
+        product: completionQuantity,
+        trxId: updatedOrder._id,
+        note: "Receiver got products",
+      });
 
-    // Receiver & buyer linkage (products)
-    orderToAcc.creditors.push({
-      name: receiverName,
-      product: completionQuantity,
-      note: "Receiver got products",
-    });
+      receiverAcc.debitors.push({
+        name: orderTo,
+        product: completionQuantity,
+        trxId: updatedOrder._id,
+        note: "Received products",
+      });
+    }
 
-    receiverAcc.debitors.push({
-      name: orderTo,
-      product: completionQuantity,
-      note: "Received products",
-    });
-
-    // --------- Save Accounts ------------
     await orderFromAcc.save();
     await orderToAcc.save();
     await receiverAcc.save();
@@ -327,7 +297,7 @@ const completeOrder = async ({ id, quantity, rate, receiver, pay }) => {
     return updatedOrder;
   } catch (err) {
     console.error("Error completing order:", err.message);
-    throw err; // throw instead of silently returning null
+    throw err;
   }
 };
 

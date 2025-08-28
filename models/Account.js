@@ -10,6 +10,8 @@ const transactionSchema = new mongoose.Schema({
 });
 
 const accountSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // link transaction to user
+
   name: {
     type: String,
     required: true,

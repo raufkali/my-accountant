@@ -1,6 +1,8 @@
 const mongoose = require("mongoose");
 
 const sendSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // link transaction to user
+
   senderName: { type: String, required: true },
   receiverName: { type: String, required: true },
   amount: { type: Number, default: 0 },
