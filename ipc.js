@@ -18,106 +18,118 @@ const receiveController = require("./controllers/recieveController");
 const serialize = (data) => JSON.parse(JSON.stringify(data));
 
 // ─── Orders ───────────────────────────────
-ipcMain.handle("orders:getAll", async () =>
-  serialize(await ordersController.getAllOrders())
+ipcMain.handle("orders:getAll", async (_, { userId }) =>
+  serialize(await ordersController.getAllOrders(userId))
 );
 
-ipcMain.handle("orders:create", async (_, orderData) =>
-  serialize(await ordersController.createOrder(orderData))
+ipcMain.handle("orders:create", async (_, { userId, orderData }) =>
+  serialize(await ordersController.createOrder(userId, orderData))
 );
 
-ipcMain.handle("orders:delete", async (_, id) =>
-  serialize(await ordersController.deleteOrder(id))
+ipcMain.handle("orders:delete", async (_, { userId, id }) =>
+  serialize(await ordersController.deleteOrder(userId, id))
 );
 
-ipcMain.handle("orders:update", async (_, id, updateData) =>
-  serialize(await ordersController.updateOrder(id, updateData))
+ipcMain.handle("orders:update", async (_, { userId, id, updateData }) =>
+  serialize(await ordersController.updateOrder(userId, id, updateData))
 );
 
-ipcMain.handle("orders:complete", async (_, data) =>
-  serialize(await ordersController.completeOrder(data))
+ipcMain.handle("orders:complete", async (_, { userId, data }) =>
+  serialize(await ordersController.completeOrder(userId, data))
 );
 
 // ─── Accounts ───────────────────────────────
-ipcMain.handle("accounts:getAll", async () =>
-  serialize(await accountController.getAllAccounts())
+ipcMain.handle("accounts:getAll", async (_, { userId }) =>
+  serialize(await accountController.getAllAccounts(userId))
 );
 
-ipcMain.handle("accounts:getById", async (_, id) =>
-  serialize(await accountController.getAccountById(id))
+ipcMain.handle("accounts:getById", async (_, { userId, id }) =>
+  serialize(await accountController.getAccountById(userId, id))
 );
 
-ipcMain.handle("accounts:create", async (_, accountData) =>
-  serialize(await accountController.createAccount(accountData))
+ipcMain.handle("accounts:create", async (_, { userId, accountData }) =>
+  serialize(await accountController.createAccount(userId, accountData))
 );
 
-ipcMain.handle("accounts:update", async (_, id, updateData) =>
-  serialize(await accountController.updateAccount(id, updateData))
+ipcMain.handle("accounts:update", async (_, { userId, id, updateData }) =>
+  serialize(await accountController.updateAccount(userId, id, updateData))
 );
 
-ipcMain.handle("accounts:delete", async (_, id) =>
-  serialize(await accountController.deleteAccount(id))
+ipcMain.handle("accounts:delete", async (_, { userId, id }) =>
+  serialize(await accountController.deleteAccount(userId, id))
 );
 
 ipcMain.handle(
   "accounts:addTransaction",
-  async (_, { accountId, type, transaction }) =>
+  async (_, { userId, accountId, type, transaction }) =>
     serialize(
-      await accountController.addTransaction(accountId, type, transaction)
+      await accountController.addTransaction(
+        userId,
+        accountId,
+        type,
+        transaction
+      )
     )
 );
 
-ipcMain.handle("accounts:removeTransaction", async (_, { id, type, transId }) =>
-  serialize(await accountController.removeTransaction(id, type, transId))
+ipcMain.handle(
+  "accounts:removeTransaction",
+  async (_, { userId, id, type, transId }) =>
+    serialize(
+      await accountController.removeTransaction(userId, id, type, transId)
+    )
 );
 
 // ─── Sells ───────────────────────────────
-ipcMain.handle("sells:getAll", async () =>
-  serialize(await sellController.getAllSells())
+ipcMain.handle("sells:getAll", async (_, { userId }) =>
+  serialize(await sellController.getAllSells(userId))
 );
 
-ipcMain.handle("sells:create", async (_, sellData) =>
-  serialize(await sellController.createSell(sellData))
+ipcMain.handle("sells:create", async (_, { userId, sellData }) =>
+  serialize(await sellController.createSell(userId, sellData))
 );
 
-ipcMain.handle("sells:delete", async (_, sellId) =>
-  serialize(await sellController.deleteSell(sellId))
+ipcMain.handle("sells:delete", async (_, { userId, sellId }) =>
+  serialize(await sellController.deleteSell(userId, sellId))
 );
+
 // ─── Buys ───────────────────────────────
-ipcMain.handle("buys:getAll", async () =>
-  serialize(await buyController.getAllBuys())
+ipcMain.handle("buys:getAll", async (_, { userId }) =>
+  serialize(await buyController.getAllBuys(userId))
 );
 
-ipcMain.handle("buys:create", async (_, buyData) =>
-  serialize(await buyController.createBuy(buyData))
+ipcMain.handle("buys:create", async (_, { userId, buyData }) =>
+  serialize(await buyController.createBuy(userId, buyData))
 );
-ipcMain.handle("buys:delete", async (_, buyId) =>
-  serialize(await buyController.deleteBuy(buyId))
+
+ipcMain.handle("buys:delete", async (_, { userId, buyId }) =>
+  serialize(await buyController.deleteBuy(userId, buyId))
 );
 
 // ─── Sends ───────────────────────────────
-ipcMain.handle("sends:getAll", async () =>
-  serialize(await sendController.getAllSends())
+ipcMain.handle("sends:getAll", async (_, { userId }) =>
+  serialize(await sendController.getAllSends(userId))
 );
 
-ipcMain.handle("sends:create", async (_, sendData) =>
-  serialize(await sendController.createSend(sendData))
+ipcMain.handle("sends:create", async (_, { userId, sendData }) =>
+  serialize(await sendController.createSend(userId, sendData))
 );
 
-ipcMain.handle("sends:delete", async (_, sendId) =>
-  serialize(await sendController.deleteSend(sendId))
+ipcMain.handle("sends:delete", async (_, { userId, sendId }) =>
+  serialize(await sendController.deleteSend(userId, sendId))
 );
+
 // ─── Receives ───────────────────────────────
-ipcMain.handle("receives:getAll", async () =>
-  serialize(await receiveController.getAllReceives())
+ipcMain.handle("receives:getAll", async (_, { userId }) =>
+  serialize(await receiveController.getAllReceives(userId))
 );
 
-ipcMain.handle("receives:create", async (_, receiveData) =>
-  serialize(await receiveController.createReceive(receiveData))
+ipcMain.handle("receives:create", async (_, { userId, receiveData }) =>
+  serialize(await receiveController.createReceive(userId, receiveData))
 );
 
-ipcMain.handle("receives:delete", async (_, receiveId) =>
-  serialize(await receiveController.deleteReceive(receiveId))
+ipcMain.handle("receives:delete", async (_, { userId, receiveId }) =>
+  serialize(await receiveController.deleteReceive(userId, receiveId))
 );
 
 // ✅ Register

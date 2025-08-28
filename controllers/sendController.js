@@ -1,11 +1,24 @@
 const Send = require("../models/SendTrx");
 const Account = require("../models/Account");
 
-async function getOrCreateAccount(name) {
+async function getOrCreateAccount(name, userId) {
   name = name.toLowerCase();
-  let account = await Account.findOne({ name });
+  let account = await Account.findOne({ name, userId });
   if (!account) {
-    account = new Account({ name });
+    account = new Account({
+      userId,
+      name,
+      balance: 0,
+      product: 0,
+      transactions: {
+        sendTransactions: [],
+        sellTransactions: [],
+        receiverTransactions: [],
+        buyTransactions: [],
+      },
+      debitors: [],
+      creditors: [],
+    });
     await account.save();
   }
   return account;
@@ -22,11 +35,15 @@ const createSend = async (data) => {
     type,
     note,
     date,
+    userId, // ✅ added
   } = data;
+
   senderName = senderName.toLowerCase();
   receiverName = receiverName.toLowerCase();
+
   // create transaction
   const sendTxn = new Send({
+    userId, // ✅ link transaction to user
     senderName,
     receiverName,
     amount,
@@ -39,8 +56,8 @@ const createSend = async (data) => {
   await sendTxn.save();
 
   // accounts
-  const senderAcc = await getOrCreateAccount(senderName);
-  const receiverAcc = await getOrCreateAccount(receiverName);
+  const senderAcc = await getOrCreateAccount(senderName, userId);
+  const receiverAcc = await getOrCreateAccount(receiverName, userId);
 
   // transaction refs
   senderAcc.transactions.sendTransactions.push({
@@ -60,7 +77,7 @@ const createSend = async (data) => {
     date: sendTxn.date,
   });
 
-  // balances/products
+  // balances/products (same logic, untouched except userId now ensures isolation)
   if (!payDebt) {
     if (type == "amount") {
       senderAcc.balance -= amount;
@@ -91,96 +108,85 @@ const createSend = async (data) => {
       date: sendTxn.date,
     });
   } else {
+    // ✅ debt settlement logic remains, still scoped per userId
     if (type === "amount") {
       senderAcc.balance -= amount;
       receiverAcc.balance += amount;
-      if (payDebt) {
-        // find the creditor
-        const creditor = senderAcc.creditors.find(
-          (c) => c.name === receiverName
-        );
-        const debitor = receiverAcc.debitors.find((d) => d.name === senderName);
-        if (creditor && debitor) {
-          let newBalance = creditor.amount - amount;
-          if (newBalance > 0) {
-            creditor.amount = newBalance;
-            debitor.amount = newBalance;
-          } else if (newBalance < 0) {
-            // remove creditor and debitor
-            senderAcc.creditors = senderAcc.creditors.filter(
-              (c) => c.name !== receiverName
-            );
-            receiverAcc.debitors = receiverAcc.debitors.filter(
-              (d) => d.name !== senderName
-            );
-            // add new debitor and creditor with the remaining amount
-            senderAcc.debitors.push({
-              name: receiverName,
-              amount: -newBalance,
-              trxId: sendTxn._id,
-              note,
-              date: sendTxn.date,
-            });
-            receiverAcc.creditors.push({
-              name: senderName,
-              amount: -newBalance,
-              trxId: sendTxn._id,
-              note,
-              date: sendTxn.date,
-            });
-          } else {
-            // exact settlement
-            senderAcc.creditors = senderAcc.creditors.filter(
-              (c) => c.name !== receiverName
-            );
-            receiverAcc.debitors = receiverAcc.debitors.filter(
-              (d) => d.name !== senderName
-            );
-          }
+      const creditor = senderAcc.creditors.find((c) => c.name === receiverName);
+      const debitor = receiverAcc.debitors.find((d) => d.name === senderName);
+      if (creditor && debitor) {
+        let newBalance = creditor.amount - amount;
+        if (newBalance > 0) {
+          creditor.amount = newBalance;
+          debitor.amount = newBalance;
+        } else if (newBalance < 0) {
+          senderAcc.creditors = senderAcc.creditors.filter(
+            (c) => c.name !== receiverName
+          );
+          receiverAcc.debitors = receiverAcc.debitors.filter(
+            (d) => d.name !== senderName
+          );
+          senderAcc.debitors.push({
+            name: receiverName,
+            amount: -newBalance,
+            trxId: sendTxn._id,
+            note,
+            date: sendTxn.date,
+          });
+          receiverAcc.creditors.push({
+            name: senderName,
+            amount: -newBalance,
+            trxId: sendTxn._id,
+            note,
+            date: sendTxn.date,
+          });
+        } else {
+          senderAcc.creditors = senderAcc.creditors.filter(
+            (c) => c.name !== receiverName
+          );
+          receiverAcc.debitors = receiverAcc.debitors.filter(
+            (d) => d.name !== senderName
+          );
         }
       }
     } else if (type === "product") {
       senderAcc.product -= product;
       receiverAcc.product += product;
-      if (payDebt) {
-        const creditor = senderAcc.creditors.find(
-          (c) => c.name === receiverName
-        );
-        const debitor = receiverAcc.debitors.find((d) => d.name === senderName);
-        if (creditor && debitor) {
-          let newProduct = creditor.product - product;
-          if (newProduct > 0) {
-            creditor.product = newProduct;
-            debitor.product = newProduct;
-          } else if (newProduct < 0) {
-            senderAcc.creditors = senderAcc.creditors.filter(
-              (c) => c.name !== receiverName
-            );
-            receiverAcc.debitors = receiverAcc.debitors.filter(
-              (d) => d.name !== senderName
-            );
-            senderAcc.debitors.push({
-              name: receiverName,
-              product: -newProduct,
-              trxId: sendTxn._id,
-              note,
-              date: sendTxn.date,
-            });
-            receiverAcc.creditors.push({
-              name: senderName,
-              product: -newProduct,
-              trxId: sendTxn._id,
-              note,
-              date: sendTxn.date,
-            });
-          } else {
-            senderAcc.creditors = senderAcc.creditors.filter(
-              (c) => c.name !== receiverName
-            );
-            receiverAcc.debitors = receiverAcc.debitors.filter(
-              (d) => d.name !== senderName
-            );
-          }
+      const creditor = senderAcc.creditors.find((c) => c.name === receiverName);
+      const debitor = receiverAcc.debitors.find((d) => d.name === senderName);
+      if (creditor && debitor) {
+        let newProduct = creditor.product - product;
+        if (newProduct > 0) {
+          creditor.product = newProduct;
+          debitor.product = newProduct;
+        } else if (newProduct < 0) {
+          senderAcc.creditors = senderAcc.creditors.filter(
+            (c) => c.name !== receiverName
+          );
+          receiverAcc.debitors = receiverAcc.debitors.filter(
+            (d) => d.name !== senderName
+          );
+          senderAcc.debitors.push({
+            name: receiverName,
+            product: -newProduct,
+            trxId: sendTxn._id,
+            note,
+            date: sendTxn.date,
+          });
+          receiverAcc.creditors.push({
+            name: senderName,
+            product: -newProduct,
+            trxId: sendTxn._id,
+            note,
+            date: sendTxn.date,
+          });
+        } else {
+          senderAcc.creditors = senderAcc.creditors.filter(
+            (c) => c.name !== receiverName
+          );
+          receiverAcc.debitors = receiverAcc.debitors.filter(
+            (d) => d.name !== senderName
+          );
         }
       }
     } else if (type === "both") {
@@ -188,86 +194,94 @@ const createSend = async (data) => {
       receiverAcc.balance += amount;
       senderAcc.product -= product;
       receiverAcc.product += product;
-      if (payDebt) {
-        // Handle amount part
-        const creditorAmt = senderAcc.creditors.find(
-          (c) => c.name === receiverName
-        );
-        const debitorAmt = receiverAcc.debitors.find(
-          (d) => d.name === senderName
-        );
-        if (creditorAmt && debitorAmt) {
-          let newBalance = creditorAmt.amount - amount;
-          let newProduct = creditorAmt.product - product;
-          if (newBalance > 0) {
-            creditorAmt.amount = newBalance;
-            debitorAmt.amount = newBalance;
-          } else if (newBalance < 0) {
-            senderAcc.creditors = senderAcc.creditors.filter(
-              (c) => c.name !== receiverName
-            );
-            receiverAcc.debitors = receiverAcc.debitors.filter(
-              (d) => d.name !== senderName
-            );
-            senderAcc.debitors.push({
-              name: receiverName,
-              amount: -newBalance,
-              trxId: sendTxn._id,
-              note,
-              date: sendTxn.date,
-            });
-            receiverAcc.creditors.push({
-              name: senderName,
-              amount: -newBalance,
-              trxId: sendTxn._id,
-              note,
-              date: sendTxn.date,
-            });
-          }
-          if (newProduct > 0) {
-            creditorAmt.product = newProduct;
-            debitorAmt.product = newProduct;
-          } else if (newProduct < 0) {
-            senderAcc.creditors = senderAcc.creditors.filter(
-              (c) => c.name !== receiverName
-            );
-            receiverAcc.debitors = receiverAcc.debitors.filter(
-              (d) => d.name !== senderName
-            );
-            senderAcc.debitors.push({
-              name: receiverName,
-              product: -newProduct,
-              trxId: sendTxn._id,
-              note,
-              date: sendTxn.date,
-            });
-            receiverAcc.creditors.push({
-              name: senderName,
-              product: -newProduct,
-              trxId: sendTxn._id,
-              note,
-              date: sendTxn.date,
-            });
-          } else {
-            senderAcc.creditors = senderAcc.creditors.filter(
-              (c) => c.name !== receiverName
-            );
-            receiverAcc.debitors = receiverAcc.debitors.filter(
-              (c) => c.name !== senderName
-            );
-          }
+
+      const creditorAmt = senderAcc.creditors.find(
+        (c) => c.name === receiverName
+      );
+      const debitorAmt = receiverAcc.debitors.find(
+        (d) => d.name === senderName
+      );
+      if (creditorAmt && debitorAmt) {
+        let newBalance = creditorAmt.amount - amount;
+        let newProduct = creditorAmt.product - product;
+
+        if (newBalance > 0) {
+          creditorAmt.amount = newBalance;
+          debitorAmt.amount = newBalance;
+        } else if (newBalance < 0) {
+          senderAcc.creditors = senderAcc.creditors.filter(
+            (c) => c.name !== receiverName
+          );
+          receiverAcc.debitors = receiverAcc.debitors.filter(
+            (d) => d.name !== senderName
+          );
+          senderAcc.debitors.push({
+            name: receiverName,
+            amount: -newBalance,
+            trxId: sendTxn._id,
+            note,
+            date: sendTxn.date,
+          });
+          receiverAcc.creditors.push({
+            name: senderName,
+            amount: -newBalance,
+            trxId: sendTxn._id,
+            note,
+            date: sendTxn.date,
+          });
+        } else {
+          senderAcc.creditors = senderAcc.creditors.filter(
+            (c) => c.name !== receiverName
+          );
+          receiverAcc.debitors = receiverAcc.debitors.filter(
+            (d) => d.name !== senderName
+          );
+        }
+
+        if (newProduct > 0) {
+          creditorAmt.product = newProduct;
+          debitorAmt.product = newProduct;
+        } else if (newProduct < 0) {
+          senderAcc.creditors = senderAcc.creditors.filter(
+            (c) => c.name !== receiverName
+          );
+          receiverAcc.debitors = receiverAcc.debitors.filter(
+            (d) => d.name !== senderName
+          );
+          senderAcc.debitors.push({
+            name: receiverName,
+            product: -newProduct,
+            trxId: sendTxn._id,
+            note,
+            date: sendTxn.date,
+          });
+          receiverAcc.creditors.push({
+            name: senderName,
+            product: -newProduct,
+            trxId: sendTxn._id,
+            note,
+            date: sendTxn.date,
+          });
+        } else {
+          senderAcc.creditors = senderAcc.creditors.filter(
+            (c) => c.name !== receiverName
+          );
+          receiverAcc.debitors = receiverAcc.debitors.filter(
+            (d) => d.name !== senderName
+          );
         }
       }
     }
   }
+
   await senderAcc.save();
   await receiverAcc.save();
   return sendTxn;
 };
 
-// ✅ DELETE SEND (mirror of createSend)
-const deleteSend = async (sendId) => {
-  const sendTxn = await Send.findById(sendId);
+// ✅ DELETE SEND
+const deleteSend = async (sendId, userId) => {
+  const sendTxn = await Send.findOne({ _id: sendId, userId });
   if (!sendTxn) throw new Error("Send transaction not found");
 
   let {
@@ -277,18 +291,15 @@ const deleteSend = async (sendId) => {
     product = 0,
     payDebt,
     type,
-    note,
-    date,
   } = sendTxn;
 
   senderName = senderName.toLowerCase();
   receiverName = receiverName.toLowerCase();
 
-  // accounts
-  const senderAcc = await getOrCreateAccount(senderName);
-  const receiverAcc = await getOrCreateAccount(receiverName);
+  const senderAcc = await getOrCreateAccount(senderName, userId);
+  const receiverAcc = await getOrCreateAccount(receiverName, userId);
 
-  // remove transaction refs
+  // remove refs
   senderAcc.transactions.sendTransactions =
     senderAcc.transactions.sendTransactions.filter(
       (t) => !t.trxId.equals(sendId)
@@ -298,6 +309,7 @@ const deleteSend = async (sendId) => {
       (t) => !t.trxId.equals(sendId)
     );
 
+  // reverse balances/products
   // reverse balances/products
   if (!payDebt) {
     if (type === "amount") {
@@ -492,12 +504,12 @@ const deleteSend = async (sendId) => {
 
   await senderAcc.save();
   await receiverAcc.save();
-  await Send.findByIdAndDelete(sendId);
+  await Send.findOneAndDelete({ _id: sendId, userId });
 
   return { message: "Send transaction fully reversed and deleted" };
 };
 
 // ✅ GET ALL SENDS
-const getAllSends = async () => Send.find();
+const getAllSends = async (userId) => Send.find({ userId });
 
 module.exports = { createSend, getAllSends, deleteSend };

@@ -3,57 +3,79 @@ const { contextBridge, ipcRenderer } = require("electron");
 contextBridge.exposeInMainWorld("api", {
   // Orders
   orders: {
-    getAll: () => ipcRenderer.invoke("orders:getAll"),
-    create: (order) => ipcRenderer.invoke("orders:create", order),
-    delete: (id) => ipcRenderer.invoke("orders:delete", id),
-    update: (id, updateData) =>
-      ipcRenderer.invoke("orders:update", id, updateData),
-    complete: (data) => ipcRenderer.invoke("orders:complete", data),
+    getAll: (userId) => ipcRenderer.invoke("orders:getAll", { userId }),
+    create: (userId, orderData) =>
+      ipcRenderer.invoke("orders:create", { userId, orderData }),
+    delete: (userId, id) => ipcRenderer.invoke("orders:delete", { userId, id }),
+    update: (userId, id, updateData) =>
+      ipcRenderer.invoke("orders:update", { userId, id, updateData }),
+    complete: (userId, data) =>
+      ipcRenderer.invoke("orders:complete", { userId, data }),
   },
+
   // Accounts
   accounts: {
-    getAll: () => ipcRenderer.invoke("accounts:getAll"),
-    getById: (id) => ipcRenderer.invoke("accounts:getById", id),
-    create: (data) => ipcRenderer.invoke("accounts:create", data),
-    update: (id, data) => ipcRenderer.invoke("accounts:update", id, data),
-    delete: (id) => ipcRenderer.invoke("accounts:delete", id),
-    addTransaction: (accountId, type, transaction) =>
+    getAll: (userId) => ipcRenderer.invoke("accounts:getAll", { userId }),
+    getById: (userId, id) =>
+      ipcRenderer.invoke("accounts:getById", { userId, id }),
+    create: (userId, data) =>
+      ipcRenderer.invoke("accounts:create", { userId, accountData: data }),
+    update: (userId, id, data) =>
+      ipcRenderer.invoke("accounts:update", { userId, id, updateData: data }),
+    delete: (userId, id) =>
+      ipcRenderer.invoke("accounts:delete", { userId, id }),
+    addTransaction: (userId, accountId, type, transaction) =>
       ipcRenderer.invoke("accounts:addTransaction", {
+        userId,
         accountId,
         type,
         transaction,
       }),
-    removeTransaction: (id, type, transId) =>
-      ipcRenderer.invoke("accounts:removeTransaction", { id, type, transId }),
+    removeTransaction: (userId, id, type, transId) =>
+      ipcRenderer.invoke("accounts:removeTransaction", {
+        userId,
+        id,
+        type,
+        transId,
+      }),
   },
 
   // Sells
   sells: {
-    getAll: () => ipcRenderer.invoke("sells:getAll"),
-    create: (sellData) => ipcRenderer.invoke("sells:create", sellData),
-    delete: (id) => ipcRenderer.invoke("sells:delete", id),
+    getAll: (userId) => ipcRenderer.invoke("sells:getAll", { userId }),
+    create: (userId, sellData) =>
+      ipcRenderer.invoke("sells:create", { userId, sellData }),
+    delete: (userId, id) =>
+      ipcRenderer.invoke("sells:delete", { userId, sellId: id }),
   },
 
   // Buys
   buys: {
-    getAll: () => ipcRenderer.invoke("buys:getAll"),
-    create: (buyData) => ipcRenderer.invoke("buys:create", buyData),
-    delete: (id) => ipcRenderer.invoke("buys:delete", id),
+    getAll: (userId) => ipcRenderer.invoke("buys:getAll", { userId }),
+    create: (userId, buyData) =>
+      ipcRenderer.invoke("buys:create", { userId, buyData }),
+    delete: (userId, id) =>
+      ipcRenderer.invoke("buys:delete", { userId, buyId: id }),
   },
 
   // Sends
   sends: {
-    getAll: () => ipcRenderer.invoke("sends:getAll"),
-    create: (sendData) => ipcRenderer.invoke("sends:create", sendData),
-    delete: (id) => ipcRenderer.invoke("sends:delete", id),
+    getAll: (userId) => ipcRenderer.invoke("sends:getAll", { userId }),
+    create: (userId, sendData) =>
+      ipcRenderer.invoke("sends:create", { userId, sendData }),
+    delete: (userId, id) =>
+      ipcRenderer.invoke("sends:delete", { userId, sendId: id }),
   },
 
   // Receives
   receives: {
-    getAll: () => ipcRenderer.invoke("receives:getAll"),
-    create: (receiveData) => ipcRenderer.invoke("receives:create", receiveData),
-    delete: (id) => ipcRenderer.invoke("receives:delete", id),
+    getAll: (userId) => ipcRenderer.invoke("receives:getAll", { userId }),
+    create: (userId, receiveData) =>
+      ipcRenderer.invoke("receives:create", { userId, receiveData }),
+    delete: (userId, id) =>
+      ipcRenderer.invoke("receives:delete", { userId, receiveId: id }),
   },
+
   // Users
   registerUser: (data) => ipcRenderer.invoke("user:register", data),
   loginUser: (data) => ipcRenderer.invoke("user:login", data),

@@ -9,6 +9,7 @@ import ProceedModal from "./orderHandler/ProceedModal";
 
 const Orders = () => {
   const [orders, setOrders] = useState([]);
+  const [userId, setUserId] = useState(null);
 
   // Totals
   const totPending = orders
@@ -18,12 +19,15 @@ const Orders = () => {
   const totComp = orders
     .filter((order) => order.status === "completed")
     .reduce((sum, order) => sum + (order.completionAmount || 0), 0);
+
   const totalPendingQuantity = orders
     .filter((order) => order.status === "pending")
     .reduce((sum, order) => sum + order.quantity, 0);
+
   const countPending = orders.filter(
     (order) => order.status === "pending"
   ).length;
+
   const countCompleted = orders.filter(
     (order) => order.status === "completed"
   ).length;
@@ -49,9 +53,13 @@ const Orders = () => {
   const proceedModalRef = useRef(null);
   const modalInstanceRef = useRef(null);
 
-  // Load orders on mount
+  // Load user + orders on mount
   useEffect(() => {
-    loadOrders();
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (user && user._id) {
+      setUserId(user._id);
+      loadOrders(user._id);
+    }
   }, []);
 
   // Init modal
@@ -65,9 +73,10 @@ const Orders = () => {
   }, []);
 
   // Load Orders
-  const loadOrders = async () => {
+  const loadOrders = async (uid = userId) => {
+    if (!uid) return;
     try {
-      const data = await window.api.orders.getAll();
+      const data = await window.api.orders.getAll({ userId: uid });
       setOrders(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Error loading orders:", err);
@@ -117,12 +126,13 @@ const Orders = () => {
       quantity: Number(newOrder.quantity),
       status: "pending",
       total: Number(newOrder.rate) * Number(newOrder.quantity),
+      userId, // ✅ attach userId
     };
 
     try {
       await window.api.orders.create(orderToSend);
       await loadOrders();
-      setNewOrder({ orderFrom: "", orderTo: "", rate: 0, quantity: 0 });
+      setNewOrder({ orderFrom: "", orderTo: "", rate: "", quantity: "" });
     } catch (err) {
       console.error("Error adding order:", err);
     }
@@ -143,7 +153,7 @@ const Orders = () => {
 
   const handleProceedSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedOrderId) return;
+    if (!selectedOrderId || !userId) return;
 
     try {
       await window.api.orders.complete({
@@ -152,6 +162,7 @@ const Orders = () => {
         rate: Number(proceedData.rate),
         receiver: String(proceedData.receiver).trim(),
         pay: proceedData.pay,
+        userId, // ✅ attach userId
       });
       await loadOrders();
     } catch (err) {
@@ -163,9 +174,9 @@ const Orders = () => {
 
   // Delete
   const handleDeleteOrder = async (id) => {
-    if (!id) return;
+    if (!id || !userId) return;
     try {
-      await window.api.orders.delete(id);
+      await window.api.orders.delete({ id, userId }); // ✅ send userId
       setOrders((prev) => prev.filter((o) => o._id !== id));
     } catch (err) {
       console.error("Error deleting order:", err);
@@ -174,9 +185,9 @@ const Orders = () => {
 
   // Cancel
   const handleCancel = async (id) => {
-    if (!id) return;
+    if (!id || !userId) return;
     try {
-      await window.api.orders.update(id, { status: "cancelled" });
+      await window.api.orders.update(id, { status: "cancelled", userId }); // ✅ attach userId
       setOrders((prev) =>
         prev.map((o) => (o._id === id ? { ...o, status: "cancelled" } : o))
       );

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import SellForm from "./tForms/SellForm";
 import BuyForm from "./tForms/BuyForm";
 import SendForm from "./tForms/SendForm";
@@ -8,6 +8,14 @@ import Journal from "./Journal";
 const Transactions = () => {
   const [type, setType] = useState("");
   const [reloadJournal, setReloadJournal] = useState(false);
+  const [userId, setUserId] = useState(null);
+
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (user && user._id) {
+      setUserId(user._id);
+    }
+  }, []);
 
   const handleReload = () => {
     // Toggle state to force Journal reload
@@ -34,23 +42,31 @@ const Transactions = () => {
 
           <div className="row">
             <div className="col-12">
-              {type === "sell" && <SellForm onSubmit={handleReload} />}
+              {type === "sell" && (
+                <SellForm userId={userId} onSubmit={handleReload} />
+              )}
             </div>
             <div className="col-12">
-              {type === "buy" && <BuyForm onSubmit={handleReload} />}
+              {type === "buy" && (
+                <BuyForm userId={userId} onSubmit={handleReload} />
+              )}
             </div>
             <div className="col-12">
-              {type === "send" && <SendForm onSubmit={handleReload} />}
+              {type === "send" && (
+                <SendForm userId={userId} onSubmit={handleReload} />
+              )}
             </div>
             <div className="col-12">
-              {type === "recieve" && <RecieveForm onSubmit={handleReload} />}
+              {type === "recieve" && (
+                <RecieveForm userId={userId} onSubmit={handleReload} />
+              )}
             </div>
           </div>
         </div>
 
         <div className="p-4 shadow-sm mt-4 bg-white border-2">
           <h3 className="mb-3">All Transactions</h3>
-          <Journal reload={reloadJournal} />
+          <Journal userId={userId} reload={reloadJournal} />
         </div>
       </div>
     </div>

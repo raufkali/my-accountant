@@ -1,12 +1,13 @@
 const Sell = require("../models/SellTrx");
 const Account = require("../models/Account");
 
-// Helper: get or create account
-async function getOrCreateAccount(name) {
+// Helper: get or create account with userId
+async function getOrCreateAccount(name, userId) {
   name = name.toLowerCase();
-  let account = await Account.findOne({ name });
+  let account = await Account.findOne({ name, userId });
   if (!account) {
     account = new Account({
+      userId,
       name,
       balance: 0,
       product: 0,
@@ -34,12 +35,14 @@ const createSell = async (data) => {
     payingMethod,
     debtors,
     note,
+    userId, // ✅ added
   } = data;
 
   const totalAmount = sellingRate * totQuantity;
 
   // 1. Save in Sell collection
   const sellTxn = new Sell({
+    userId, // ✅ link transaction to user
     sellerName,
     buyerName,
     sellingRate,
@@ -51,9 +54,9 @@ const createSell = async (data) => {
   });
   await sellTxn.save();
 
-  // 2. Get accounts
-  const sellerAcc = await getOrCreateAccount(sellerName);
-  const buyerAcc = await getOrCreateAccount(buyerName);
+  // 2. Get accounts (with userId)
+  const sellerAcc = await getOrCreateAccount(sellerName, userId);
+  const buyerAcc = await getOrCreateAccount(buyerName, userId);
 
   // 3. Add to seller's Sell Transactions
   sellerAcc.transactions.sellTransactions.push({
@@ -80,9 +83,8 @@ const createSell = async (data) => {
     sellerAcc.balance += totalAmount;
     buyerAcc.balance -= totalAmount;
   } else if (payingMethod === "payToDebtor" && debtors) {
-    // Buyer pays debtors directly
     for (let debtor of debtors) {
-      const debtorAcc = await getOrCreateAccount(debtor.name);
+      const debtorAcc = await getOrCreateAccount(debtor.name, userId);
 
       debtorAcc.balance += debtor.amount;
       buyerAcc.balance -= debtor.amount;
@@ -103,7 +105,6 @@ const createSell = async (data) => {
           date: new Date(),
         });
       } else {
-        // debtor is actually the seller
         debtorAcc.transactions.receiverTransactions.push({
           name: buyerName,
           amount: debtor.amount,
@@ -112,36 +113,6 @@ const createSell = async (data) => {
           date: new Date(),
         });
       }
-
-      // Update creditors/debitors relation
-      debtorAcc.creditors.forEach((entry) => {
-        let found = false;
-        if (entry.name === sellerName) {
-          found = true;
-          let remaining = entry.amount - debtor.amount;
-          if (remaining >= 0) {
-            entry.amount = remaining;
-          } else {
-            entry.amount = 0;
-            sellerAcc.creditors.push({
-              name: entry.name,
-              amount: Math.abs(remaining),
-              trxId: sellTxn._id,
-              date: new Date(),
-              note,
-            });
-          }
-        }
-        if (!found) {
-          sellerAcc.creditors.push({
-            name: debtor.name,
-            amount: debtor.amount,
-            trxId: sellTxn._id,
-            date: new Date(),
-            note,
-          });
-        }
-      });
 
       await debtorAcc.save();
     }
@@ -172,13 +143,14 @@ const createSell = async (data) => {
   return sellTxn;
 };
 
-// Get all sells
-const getAllSells = async () => {
-  return await Sell.find();
+// Get all sells (for one user)
+const getAllSells = async (userId) => {
+  return await Sell.find({ userId });
 };
+
 // Delete a Sell Transaction
-const deleteSell = async (sellId) => {
-  const sellTxn = await Sell.findById(sellId);
+const deleteSell = async (sellId, userId) => {
+  const sellTxn = await Sell.findOne({ _id: sellId, userId });
   if (!sellTxn) {
     throw new Error("Sell transaction not found");
   }
@@ -195,8 +167,8 @@ const deleteSell = async (sellId) => {
   const totalAmount = sellingRate * totQuantity;
 
   // 1. Get accounts
-  const sellerAcc = await getOrCreateAccount(sellerName);
-  const buyerAcc = await getOrCreateAccount(buyerName);
+  const sellerAcc = await getOrCreateAccount(sellerName, userId);
+  const buyerAcc = await getOrCreateAccount(buyerName, userId);
 
   // 2. Remove transaction references
   sellerAcc.transactions.sellTransactions =
@@ -214,12 +186,11 @@ const deleteSell = async (sellId) => {
     buyerAcc.balance += totalAmount;
   } else if (payingMethod === "payToDebtor" && debtors) {
     for (let debtor of debtors) {
-      const debtorAcc = await getOrCreateAccount(debtor.name);
+      const debtorAcc = await getOrCreateAccount(debtor.name, userId);
 
       debtorAcc.balance -= debtor.amount;
       buyerAcc.balance += debtor.amount;
 
-      // Remove references
       sellerAcc.transactions.sendTransactions =
         sellerAcc.transactions.sendTransactions.filter(
           (t) => t.trxId.toString() !== sellId.toString()
@@ -228,14 +199,6 @@ const deleteSell = async (sellId) => {
         debtorAcc.transactions.receiverTransactions.filter(
           (t) => t.trxId.toString() !== sellId.toString()
         );
-
-      // Revert creditors/debitors relation
-      sellerAcc.creditors = sellerAcc.creditors.filter(
-        (c) => c.trxId.toString() !== sellId.toString()
-      );
-      debtorAcc.creditors = debtorAcc.creditors.filter(
-        (c) => c.trxId.toString() !== sellId.toString()
-      );
 
       await debtorAcc.save();
     }
@@ -255,8 +218,8 @@ const deleteSell = async (sellId) => {
   await sellerAcc.save();
   await buyerAcc.save();
 
-  // 5. Finally delete sell transaction
-  await Sell.findByIdAndDelete(sellId);
+  // 5. Delete sell transaction
+  await Sell.findOneAndDelete({ _id: sellId, userId });
 
   return { message: "Sell transaction deleted successfully" };
 };

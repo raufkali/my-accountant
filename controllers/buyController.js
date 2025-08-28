@@ -1,33 +1,35 @@
 const Buy = require("../models/BuyTrx");
 const Account = require("../models/Account");
 
-async function getOrCreateAccount(name) {
+async function getOrCreateAccount(name, userId) {
   name = name.toLowerCase();
-  let account = await Account.findOne({ name });
+  let account = await Account.findOne({ name, userId });
   if (!account) {
-    account = new Account({ name });
+    account = new Account({ name, userId });
     await account.save();
   }
   return account;
 }
 
-const createBuy = async (data) => {
+// ✅ Create Buy Transaction
+const createBuy = async (data, userId) => {
   const { buyerName, sellerName, buyingRate, totQuantity, payingMethod, note } =
     data;
   const totalAmount = buyingRate * totQuantity;
 
   const buyTxn = new Buy({
-    buyerName,
-    sellerName,
+    buyerName: buyerName.toLowerCase(),
+    sellerName: sellerName.toLowerCase(),
     buyingRate,
     totQuantity,
     payingMethod,
     note,
+    userId,
   });
   await buyTxn.save();
 
-  const buyerAcc = await getOrCreateAccount(buyerName);
-  const sellerAcc = await getOrCreateAccount(sellerName);
+  const buyerAcc = await getOrCreateAccount(buyerName, userId);
+  const sellerAcc = await getOrCreateAccount(sellerName, userId);
 
   buyerAcc.transactions.buyTransactions.push({
     name: sellerName,
@@ -73,9 +75,10 @@ const createBuy = async (data) => {
 
   return buyTxn;
 };
-// Delete a Buy Transaction
-const deleteBuy = async (buyId) => {
-  const buyTxn = await Buy.findById(buyId);
+
+// ✅ Delete Buy Transaction
+const deleteBuy = async (buyId, userId) => {
+  const buyTxn = await Buy.findOne({ _id: buyId, userId });
   if (!buyTxn) {
     throw new Error("Buy transaction not found");
   }
@@ -85,21 +88,19 @@ const deleteBuy = async (buyId) => {
 
   const totalAmount = buyingRate * totQuantity;
 
-  // 1. Get accounts
-  const buyerAcc = await getOrCreateAccount(buyerName);
-  const sellerAcc = await getOrCreateAccount(sellerName);
+  const buyerAcc = await getOrCreateAccount(buyerName, userId);
+  const sellerAcc = await getOrCreateAccount(sellerName, userId);
 
-  // 2. Remove transaction references
   buyerAcc.transactions.buyTransactions =
     buyerAcc.transactions.buyTransactions.filter(
       (t) => t.trxId.toString() !== buyId.toString()
     );
+
   sellerAcc.transactions.sellTransactions =
     sellerAcc.transactions.sellTransactions.filter(
       (t) => t.trxId.toString() !== buyId.toString()
     );
 
-  // 3. Revert balances
   if (payingMethod === "paid") {
     buyerAcc.balance += totalAmount;
     sellerAcc.balance -= totalAmount;
@@ -112,19 +113,18 @@ const deleteBuy = async (buyId) => {
     );
   }
 
-  // 4. Revert product changes
   buyerAcc.product -= totQuantity;
   sellerAcc.product += totQuantity;
 
   await buyerAcc.save();
   await sellerAcc.save();
 
-  // 5. Delete the Buy transaction itself
-  await Buy.findByIdAndDelete(buyId);
+  await Buy.deleteOne({ _id: buyId, userId });
 
   return { message: "Buy transaction deleted successfully" };
 };
 
-const getAllBuys = async () => Buy.find();
+// ✅ Get all Buys (user-specific)
+const getAllBuys = async (userId) => Buy.find({ userId }).sort({ date: -1 });
 
 module.exports = { createBuy, getAllBuys, deleteBuy };

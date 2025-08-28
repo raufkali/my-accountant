@@ -6,17 +6,19 @@ import {
   faChevronUp,
 } from "@fortawesome/free-solid-svg-icons";
 
-const Journal = ({ reload }) => {
+const Journal = ({ reload, userId }) => {
   const [entries, setEntries] = useState([]);
   const [expandedNotes, setExpandedNotes] = useState({}); // track expanded state
 
   const fetchData = async () => {
+    if (!userId) return;
+
     try {
       const [sells, buys, sends, receives] = await Promise.all([
-        window.api.sells.getAll(),
-        window.api.buys.getAll(),
-        window.api.sends.getAll(),
-        window.api.receives.getAll(),
+        window.api.sells.getAll({ userId }),
+        window.api.buys.getAll({ userId }),
+        window.api.sends.getAll({ userId }),
+        window.api.receives.getAll({ userId }),
       ]);
 
       let formatted = [];
@@ -96,7 +98,7 @@ const Journal = ({ reload }) => {
 
   useEffect(() => {
     fetchData();
-  }, [reload]);
+  }, [reload, userId]);
 
   const handleDelete = async (entry) => {
     try {
@@ -107,16 +109,16 @@ const Journal = ({ reload }) => {
 
       switch (entry.typeName) {
         case "Sell":
-          await window.api.sells.delete(entry.dbId);
+          await window.api.sells.delete(entry.dbId, { userId });
           break;
         case "Buy":
-          await window.api.buys.delete(entry.dbId);
+          await window.api.buys.delete(entry.dbId, { userId });
           break;
         case "Send":
-          await window.api.sends.delete(entry.dbId);
+          await window.api.sends.delete(entry.dbId, { userId });
           break;
         case "Receive":
-          await window.api.receives.delete(entry.dbId);
+          await window.api.receives.delete(entry.dbId, { userId });
           break;
         default:
           console.warn("Unknown transaction type:", entry.typeName);
