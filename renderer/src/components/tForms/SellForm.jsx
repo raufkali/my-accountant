@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-const SellForm = ({ onSubmit }) => {
+const SellForm = ({ onSubmit, userId }) => {
   const [form, setForm] = useState({
     sellerName: "",
     buyerName: "",
@@ -34,8 +34,14 @@ const SellForm = ({ onSubmit }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      if (!userId) {
+        alert("User not logged in ❌");
+        return;
+      }
+
       const payload = {
         ...form,
+        userId, // attach logged-in user
         sellingRate: Number(form.sellingRate),
         totQuantity: Number(form.totQuantity),
         debtors:
@@ -64,6 +70,7 @@ const SellForm = ({ onSubmit }) => {
       if (onSubmit) onSubmit();
     } catch (err) {
       console.error("Error creating sell transaction:", err);
+      alert("Failed to create sell transaction ❌");
     }
   };
 

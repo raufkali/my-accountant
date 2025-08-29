@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-const SendForm = ({ onSubmit }) => {
+const SendForm = ({ onSubmit, userId }) => {
   const [form, setForm] = useState({
     senderName: "",
     receiverName: "",
@@ -23,10 +23,16 @@ const SendForm = ({ onSubmit }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      if (!userId) {
+        alert("User not logged in ❌");
+        return;
+      }
+
       const payload = {
         ...form,
-        amount: Number(form.amount),
-        product: Number(form.product),
+        userId, // attach logged-in user
+        amount: Number(form.amount) || 0,
+        product: Number(form.product) || 0,
       };
 
       await window.api.sends.create(payload);
@@ -46,6 +52,7 @@ const SendForm = ({ onSubmit }) => {
       if (onSubmit) onSubmit();
     } catch (err) {
       console.error("Error creating send transaction:", err);
+      alert("Failed to create send transaction ❌");
     }
   };
 
@@ -54,7 +61,7 @@ const SendForm = ({ onSubmit }) => {
       <h3>Sender Form</h3>
       <form onSubmit={handleSubmit} className="row gap-2">
         {/* Type Selection FIRST */}
-        <div className="col-3  d-flex gap-2 mb-2">
+        <div className="col-3 d-flex gap-2 mb-2">
           <select
             name="type"
             value={form.type}

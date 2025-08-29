@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { ObjectId } = mongoose.Types;
 
 // Debtor sub-schema
 const debtorSchema = new mongoose.Schema({

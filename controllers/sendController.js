@@ -37,6 +37,7 @@ const createSend = async (data) => {
     date,
     userId, // ✅ added
   } = data;
+  userId = mongoose.Types.ObjectId(String(userId)); // ✅ always normalize
 
   senderName = senderName.toLowerCase();
   receiverName = receiverName.toLowerCase();
@@ -281,6 +282,8 @@ const createSend = async (data) => {
 
 // ✅ DELETE SEND
 const deleteSend = async (sendId, userId) => {
+  userId = mongoose.Types.ObjectId(String(userId)); // ✅ always normalize
+
   const sendTxn = await Send.findOne({ _id: sendId, userId });
   if (!sendTxn) throw new Error("Send transaction not found");
 
@@ -510,6 +513,8 @@ const deleteSend = async (sendId, userId) => {
 };
 
 // ✅ GET ALL SENDS
-const getAllSends = async (userId) => Send.find({ userId });
-
+const getAllSends = async (userId) => {
+  userId = mongoose.Types.ObjectId(String(userId));
+  return Send.find({ userId });
+};
 module.exports = { createSend, getAllSends, deleteSend };

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-const BuyForm = ({ onSubmit }) => {
+const BuyForm = ({ onSubmit, userId }) => {
   const [form, setForm] = useState({
     buyerName: "",
     sellerName: "",
@@ -33,8 +33,14 @@ const BuyForm = ({ onSubmit }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      if (!userId) {
+        alert("User not logged in ❌");
+        return;
+      }
+
       const payload = {
         ...form,
+        userId, // attach current logged-in user
         buyingRate: Number(form.buyingRate),
         totQuantity: Number(form.totQuantity),
         debtors: form.payingMethod === "payToDebtor" ? debtors : [],

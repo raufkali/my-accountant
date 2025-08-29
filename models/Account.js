@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { ObjectId } = mongoose.Types;
 
 const transactionSchema = new mongoose.Schema({
   name: { type: String, required: true },
