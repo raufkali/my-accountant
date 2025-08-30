@@ -56,6 +56,7 @@ const Orders = () => {
   // Load user + orders on mount
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user"));
+    console.log(user._id);
     if (user && user._id) {
       setUserId(user._id);
       loadOrders(user._id);
@@ -130,7 +131,8 @@ const Orders = () => {
     };
 
     try {
-      await window.api.orders.create(orderToSend);
+      console.log(userId, orderToSend);
+      await window.api.orders.create(orderToSend, userId);
       await loadOrders();
       setNewOrder({ orderFrom: "", orderTo: "", rate: "", quantity: "" });
     } catch (err) {
@@ -154,7 +156,6 @@ const Orders = () => {
   const handleProceedSubmit = async (e) => {
     e.preventDefault();
     if (!selectedOrderId || !userId) return;
-
     try {
       await window.api.orders.complete({
         id: selectedOrderId,

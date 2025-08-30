@@ -1,8 +1,10 @@
 const Send = require("../models/SendTrx");
 const Account = require("../models/Account");
-
+const mongoose = require("mongoose");
 // ✅ Helper to get/create account
 async function getOrCreateAccount(name, userId) {
+  userId = mongoose.Types.ObjectId(String(userId)); // ✅ always normalize
+
   name = name.toLowerCase();
   let account = await Account.findOne({ name, userId });
   if (!account) {
@@ -14,6 +16,8 @@ async function getOrCreateAccount(name, userId) {
 
 // ✅ Create send transaction
 const createSend = async (data, userId) => {
+  userId = mongoose.Types.ObjectId(String(userId)); // ✅ always normalize
+
   let {
     senderName,
     receiverName,
@@ -38,7 +42,7 @@ const createSend = async (data, userId) => {
     type,
     note,
     date,
-    userId,
+    userId: userId.toString(),
   });
   await sendTxn.save();
 
@@ -71,11 +75,15 @@ const createSend = async (data, userId) => {
 
 // ✅ Get all sends (user-specific)
 const getSends = async (userId) => {
-  return await Send.find({ userId }).sort({ date: -1 });
+  userId = mongoose.Types.ObjectId(String(userId)); // ✅ always normalize
+
+  return await Send.find({ userId }).sort({ date: -1 }).lean();
 };
 
 // ✅ Delete send transaction
 const deleteSend = async (id, userId) => {
+  userId = mongoose.Types.ObjectId(String(userId)); // ✅ always normalize
+
   const sendTxn = await Send.findOne({ _id: id, userId });
   if (!sendTxn) return null;
 
@@ -101,6 +109,8 @@ const deleteSend = async (id, userId) => {
 
 // ✅ Update send transaction
 const updateSend = async (id, data, userId) => {
+  userId = mongoose.Types.ObjectId(String(userId)); // ✅ always normalize
+
   const sendTxn = await Send.findOneAndUpdate(
     { _id: id, userId },
     { $set: data },

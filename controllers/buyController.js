@@ -1,5 +1,6 @@
 const Buy = require("../models/BuyTrx");
 const Account = require("../models/Account");
+const mongoose = require("mongoose");
 
 async function getOrCreateAccount(name, userId) {
   name = name.toLowerCase();
@@ -125,6 +126,8 @@ const deleteBuy = async (buyId, userId) => {
 };
 
 // ✅ Get all Buys (user-specific)
-const getAllBuys = async (userId) => Buy.find({ userId }).sort({ date: -1 });
+const getAllBuys = async (userId) => {
+  Buy.find({ userId }).sort({ date: -1 });
+};
 
 module.exports = { createBuy, getAllBuys, deleteBuy };

@@ -1,6 +1,5 @@
 const mongoose = require("mongoose");
 mongoose.models = {};
-const { ObjectId } = mongoose.Types;
 
 const OrderSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // link transaction to user

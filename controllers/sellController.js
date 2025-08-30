@@ -1,10 +1,10 @@
 const Sell = require("../models/SellTrx");
 const Account = require("../models/Account");
-
 // Helper: get or create account with userId
 async function getOrCreateAccount(name, userId) {
   name = name.toLowerCase();
   let account = await Account.findOne({ name, userId });
+
   if (!account) {
     account = new Account({
       userId,

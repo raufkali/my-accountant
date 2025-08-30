@@ -14,23 +14,38 @@ const sellController = require("./controllers/sellController");
 const buyController = require("./controllers/buyController");
 const sendController = require("./controllers/sendController");
 const receiveController = require("./controllers/recieveController");
+const { ObjectId } = require("mongodb");
 
 // ─── Helpers ───────────────────────────────
+function objectToBuffer(obj) {
+  return Buffer.from(Object.values(obj));
+}
 const toObjectId = (id) => {
+  const raw = id.userId.buffer || id.userId || id; // your weird object
+  const buf = objectToBuffer(raw);
+  id = new ObjectId(buf).toString();
   if (!id) return null;
-  return new mongoose.Types.ObjectId(String(id));
+  const str = String(id).trim();
+  if (mongoose.Types.ObjectId.isValid(str)) {
+    return new ObjectId(str);
+  }
+  console.warn("⚠️ Invalid ObjectId passed:", id);
+  return null; // or throw an Error if you want strictness
 };
 
-const serialize = (data) => JSON.parse(JSON.stringify(data));
+const serialize = (data) => {
+  // JSON.parse(JSON.stringify(data)
+  return data;
+};
 
 // ─── Orders ───────────────────────────────
 ipcMain.handle("orders:getAll", async (_, { userId }) =>
   serialize(await ordersController.getAllOrders(toObjectId(userId)))
 );
 
-ipcMain.handle("orders:create", async (_, { userId, orderData }) =>
-  serialize(await ordersController.createOrder(toObjectId(userId), orderData))
-);
+ipcMain.handle("orders:create", async (_, { userId, orderData }) => {
+  serialize(await ordersController.createOrder(toObjectId(userId), orderData));
+});
 
 ipcMain.handle("orders:delete", async (_, { userId, id }) =>
   serialize(await ordersController.deleteOrder(toObjectId(userId), id))
