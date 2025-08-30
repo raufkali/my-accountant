@@ -24,71 +24,80 @@ const Journal = ({ reload, userId }) => {
       let formatted = [];
 
       // Sell transactions
-      sells.forEach((sell) => {
-        const totalAmount = sell.sellingRate * sell.totQuantity;
-        const productCount = sell.totQuantity;
-        const debtorsInfo =
-          sell.debtors?.map((d) => `${d.name}: ${d.amount}`).join(", ") || "-";
+      if (sells) {
+        sells.forEach((sell) => {
+          const totalAmount = sell.sellingRate * sell.totQuantity;
+          const productCount = sell.totQuantity;
+          const debtorsInfo =
+            sell.debtors?.map((d) => `${d.name}: ${d.amount}`).join(", ") ||
+            "-";
 
-        formatted.push({
-          id: `S-${sell._id}`,
-          dbId: sell._id,
-          typeName: "Sell",
-          buyer: sell.buyerName,
-          seller: sell.sellerName,
-          amount: totalAmount,
-          products: productCount,
-          debtors: debtorsInfo,
-          note: sell.note || "-",
+          formatted.push({
+            id: `S-${sell._id}`,
+            dbId: sell._id,
+            typeName: "Sell",
+            buyer: sell.buyerName,
+            seller: sell.sellerName,
+            amount: totalAmount,
+            products: productCount,
+            debtors: debtorsInfo,
+            note: sell.note || "-",
+          });
         });
-      });
+      }
 
       // Buy transactions
-      buys.forEach((buy) => {
-        const totalAmount = buy.buyingRate * buy.totQuantity;
-        const productCount = buy.totQuantity;
-        formatted.push({
-          id: `B-${buy._id}`,
-          dbId: buy._id,
-          typeName: "Buy",
-          buyer: buy.buyerName,
-          seller: buy.sellerName,
-          amount: totalAmount,
-          products: productCount,
-          debtors: "-",
-          note: buy.note || "-",
+      if (buys) {
+        buys.forEach((buy) => {
+          const totalAmount = buy.buyingRate * buy.totQuantity;
+          const productCount = buy.totQuantity;
+          formatted.push({
+            id: `B-${buy._id}`,
+            dbId: buy._id,
+            typeName: "Buy",
+            buyer: buy.buyerName,
+            seller: buy.sellerName,
+            amount: totalAmount,
+            products: productCount,
+            debtors: "-",
+            note: buy.note || "-",
+          });
         });
-      });
+      }
 
       // Send transactions
-      sends.forEach((send) => {
-        formatted.push({
-          id: `SD-${send._id}`,
-          dbId: send._id,
-          typeName: "Send",
-          buyer: send.receiverName,
-          seller: send.senderName,
-          amount: send.amount,
-          products: send.product,
-          debtors: "-",
-          note: send.note || "-",
+      if (sends) {
+        sends.forEach((send) => {
+          formatted.push({
+            id: `SD-${send._id}`,
+            dbId: send._id,
+            typeName: "Send",
+            buyer: send.receiverName,
+            seller: send.senderName,
+            amount: send.amount,
+            products: send.product,
+            debtors: "-",
+            note: send.note || "-",
+          });
         });
-      });
+      }
 
       // Receive transactions
-      receives.forEach((rec) => {
-        formatted.push({
-          id: `R-${rec._id}`,
-          dbId: rec._id,
-          typeName: "Receive",
-          buyer: rec.receiverName,
-          seller: rec.senderName,
-          amount: rec.amount,
-          products: rec.product,
-          debtors: "-",
-          note: rec.note || "-",
+      if (receives) {
+        receives.forEach((rec) => {
+          formatted.push({
+            id: `R-${rec._id}`,
+            dbId: rec._id,
+            typeName: "Receive",
+            buyer: rec.receiverName,
+            seller: rec.senderName,
+            amount: rec.amount,
+            products: rec.product,
+            debtors: "-",
+            note: rec.note || "-",
+          });
         });
-      });
+      }
 
       setEntries(formatted);
     } catch (error) {

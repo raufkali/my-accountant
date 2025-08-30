@@ -273,7 +273,7 @@ const createSend = async (data) => {
 
   await senderAcc.save();
   await receiverAcc.save();
-  return sendTxn;
+  return sendTxn.toObject();
 };
 
 // ✅ DELETE SEND
@@ -508,6 +508,6 @@ const deleteSend = async (sendId, userId) => {
 
 // ✅ GET ALL SENDS
 const getAllSends = async (userId) => {
-  return Send.find({ userId });
+  return Send.find(userId).sort({ date: -1 }).lean();
 };
 module.exports = { createSend, getAllSends, deleteSend };

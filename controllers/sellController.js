@@ -145,7 +145,7 @@ const createSell = async (data) => {
 
 // Get all sells (for one user)
 const getAllSells = async (userId) => {
-  return await Sell.find({ userId });
+  return await Sell.find(userId).sort({ createdAt: -1 }).lean();
 };
 
 // Delete a Sell Transaction

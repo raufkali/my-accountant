@@ -11,8 +11,6 @@ const SendForm = ({ onSubmit, userId }) => {
     date: "",
     note: "",
   });
-  if (senderName) senderName = senderName.toLowerCase();
-  if (receiverName) receiverName = receiverName.toLowerCase();
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;

@@ -77,7 +77,7 @@ const createSend = async (data, userId) => {
 const getSends = async (userId) => {
   userId = mongoose.Types.ObjectId(String(userId)); // ✅ always normalize
 
-  return await Send.find({ userId }).sort({ date: -1 }).lean();
+  return await Send.find(userId).sort({ date: -1 }).lean();
 };
 
 // ✅ Delete send transaction
