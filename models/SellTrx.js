@@ -14,7 +14,7 @@ const debtorSchema = new mongoose.Schema({
 });
 
 const sellSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // link transaction to user
+  userId: { type: String, ref: "User", required: true }, // string instead of ObjectId
 
   type: {
     type: String,

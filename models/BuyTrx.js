@@ -4,7 +4,7 @@ const { ObjectId } = mongoose.Types;
 const buySchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // link transaction to user
 
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // link transaction to user
+  userId: { type: String, ref: "User", required: true }, // string instead of ObjectId
   buyerName: { type: String, required: true },
   sellerName: { type: String, required: true },
   buyingRate: { type: Number, required: true },

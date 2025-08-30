@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 mongoose.models = {};
 
 const OrderSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // link transaction to user
+  userId: { type: String, ref: "User", required: true }, // string instead of ObjectId
 
   orderFrom: { type: String, required: true },
   orderTo: { type: String, required: true, default: "jawad" },

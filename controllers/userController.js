@@ -35,9 +35,7 @@ async function loginUser(event, data) {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return { success: false, message: "Invalid password" };
     // ✅ Convert to plain object and remove password
-    console.log(user);
     const safeUser = user.toObject();
-    console.log(safeUser);
 
     delete safeUser.password;
 

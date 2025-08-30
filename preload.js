@@ -4,8 +4,8 @@ contextBridge.exposeInMainWorld("api", {
   // Orders
   orders: {
     getAll: (userId) => ipcRenderer.invoke("orders:getAll", { userId }),
-    create: (userId, orderData) =>
-      ipcRenderer.invoke("orders:create", { userId, orderData }),
+    create: (orderData, userId) =>
+      ipcRenderer.invoke("orders:create", { orderData, userId }),
     delete: (userId, id) => ipcRenderer.invoke("orders:delete", { userId, id }),
     update: (userId, id, updateData) =>
       ipcRenderer.invoke("orders:update", { userId, id, updateData }),

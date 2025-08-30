@@ -21,18 +21,10 @@ function objectToBuffer(obj) {
   return Buffer.from(Object.values(obj));
 }
 const toObjectId = (id) => {
-  const raw = id.userId.buffer || id.userId || id; // your weird object
-  const buf = objectToBuffer(raw);
-  id = new ObjectId(buf).toString();
-  if (!id) return null;
-  const str = String(id).trim();
-  if (mongoose.Types.ObjectId.isValid(str)) {
-    return new ObjectId(str);
-  }
-  console.warn("⚠️ Invalid ObjectId passed:", id);
-  return null; // or throw an Error if you want strictness
-};
+  console.log(id);
 
+  return id;
+};
 const serialize = (data) => {
   // JSON.parse(JSON.stringify(data)
   return data;
@@ -44,7 +36,7 @@ ipcMain.handle("orders:getAll", async (_, { userId }) =>
 );
 
 ipcMain.handle("orders:create", async (_, { userId, orderData }) => {
-  serialize(await ordersController.createOrder(toObjectId(userId), orderData));
+  serialize(await ordersController.createOrder(orderData, toObjectId(userId)));
 });
 
 ipcMain.handle("orders:delete", async (_, { userId, id }) =>

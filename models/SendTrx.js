@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const { ObjectId } = mongoose.Types;
 
 const sendSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // link transaction to user
+  userId: { type: String, ref: "User", required: true }, // string instead of ObjectId
 
   senderName: { type: String, required: true },
   receiverName: { type: String, required: true },

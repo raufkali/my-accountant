@@ -1,6 +1,6 @@
 const Order = require("../models/Order");
 const Account = require("../models/Account");
-
+const mongoose = require("mongoose");
 // -------------------- Create Order --------------------
 const createOrder = async (data, userId) => {
   try {
@@ -125,7 +125,7 @@ const getOrderById = async (id, userId) => {
 // -------------------- Get All Orders --------------------
 const getAllOrders = async (userId) => {
   try {
-    return await Order.find({ userId }).sort({ createdAt: -1 }).lean();
+    return await Order.find(userId).sort({ createdAt: -1 }).lean();
   } catch (error) {
     console.error("Error fetching orders:", error);
     return [];
