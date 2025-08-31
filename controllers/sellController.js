@@ -22,7 +22,7 @@ async function getOrCreateAccount(name, userId) {
     });
     await account.save();
   }
-  return account;
+  return account.toObject();
 }
 
 // Create a Sell Transaction
@@ -140,7 +140,7 @@ const createSell = async (data) => {
   await sellerAcc.save();
   await buyerAcc.save();
 
-  return sellTxn;
+  return sellTxn.toObject();
 };
 
 // Get all sells (for one user)

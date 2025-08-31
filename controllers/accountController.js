@@ -11,7 +11,7 @@ async function getOrCreateAccount(name, userId) {
     account = new Account({ name, userId });
     await account.save();
   }
-  return account;
+  return account.toObject();
 }
 
 // ✅ Create send transaction
@@ -70,7 +70,7 @@ const createSend = async (data, userId) => {
   await sender.save();
   await receiver.save();
 
-  return sendTxn;
+  return sendTxn.toObject();
 };
 
 // ✅ Get all sends (user-specific)
@@ -104,7 +104,7 @@ const deleteSend = async (id, userId) => {
   }
 
   await Send.deleteOne({ _id: id, userId });
-  return sendTxn;
+  return sendTxn.toObject();
 };
 
 // ✅ Update send transaction
@@ -116,7 +116,7 @@ const updateSend = async (id, data, userId) => {
     { $set: data },
     { new: true }
   );
-  return sendTxn;
+  return sendTxn.toObject();
 };
 
 module.exports = {

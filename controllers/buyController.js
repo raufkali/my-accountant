@@ -9,7 +9,7 @@ async function getOrCreateAccount(name, userId) {
     account = new Account({ name, userId });
     await account.save();
   }
-  return account;
+  return account.toObject();
 }
 
 // ✅ Create Buy Transaction
@@ -74,7 +74,7 @@ const createBuy = async (data, userId) => {
   await buyerAcc.save();
   await sellerAcc.save();
 
-  return buyTxn;
+  return buyTxn.toObject();
 };
 
 // ✅ Delete Buy Transaction
